@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>台股健診雷達</title>
+  <style>
+    :root{
+      --bg:#0c111b;
+      --panel:#131b29;
+      --panel2:#182233;
+      --text:#edf2f7;
+      --muted:#9ba8ba;
+      --border:#29364a;
+      --accent:#6ea8fe;
+      --good:#52d273;
+      --warn:#ffd35a;
+      --bad:#ff6262;
+      --orange:#ff9b50;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;
+    }
+    .wrap{max-width:1760px;margin:auto;padding:24px}
+    h1{margin:0 0 6px;font-size:32px}
+    h2{font-size:21px;margin:0}
+    .muted{color:var(--muted)}
+    .topline{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+    .metric{
+      flex:1 1 180px;
+      min-width:180px;
+      padding:14px 16px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      border-radius:14px;
+    }
+    .metric b{display:block;font-size:25px;margin-top:3px}
+    .search{
+      display:flex;
+      gap:10px;
+      margin:18px 0 12px;
+    }
+    input,select{
+      width:100%;
+      border:1px solid var(--border);
+      background:var(--panel);
+      color:var(--text);
+      border-radius:12px;
+      padding:13px 14px;
+      font-size:16px;
+      outline:none;
+    }
+    button{
+      border:0;
+      border-radius:12px;
+      padding:0 22px;
+      font-size:16px;
+      font-weight:700;
+      color:#07101d;
+      background:var(--accent);
+      cursor:pointer;
+    }
+    .result{
+      display:none;
+      padding:17px;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:14px;
+      margin-bottom:20px;
+    }
+    .result.show{display:block}
+    .badges{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+    .badge{
+      padding:6px 10px;
+      border:1px solid var(--border);
+      background:var(--panel2);
+      border-radius:999px;
+      font-size:14px;
+    }
+    .facts{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(130px,1fr));
+      gap:10px;
+      margin-top:12px;
+    }
+    .fact{
+      background:var(--panel2);
+      border:1px solid var(--border);
+      border-radius:11px;
+      padding:10px;
+    }
+    .fact span{display:block;color:var(--muted);font-size:12px}
+    .fact b{display:block;margin-top:3px;font-size:18px}
+    .boards{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      gap:18px;
+      align-items:start;
+    }
+    .board{
+      min-width:0;
+      border:1px solid var(--border);
+      background:var(--panel);
+      border-radius:14px;
+      padding:14px;
+    }
+    .boardhead{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .legend{
+      color:var(--muted);
+      font-size:13px;
+      margin:8px 0 10px;
+      min-height:38px;
+    }
+    .tablebox{
+      height:610px;
+      min-height:280px;
+      max-height:1200px;
+      resize:vertical;
+      overflow:auto;
+      border:1px solid var(--border);
+      border-radius:10px;
+      background:#0f1623;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+      white-space:nowrap;
+    }
+    th,td{
+      padding:8px 9px;
+      border-bottom:1px solid #202c3d;
+      text-align:left;
+    }
+    th{
+      position:sticky;
+      top:0;
+      z-index:2;
+      background:#172235;
+    }
+    tbody tr:hover{background:#182437}
+    .light{font-size:17px;text-align:center}
+    .small{font-size:12px;color:var(--muted)}
+    footer{
+      margin:18px 0 4px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    @media(max-width:900px){
+      .wrap{padding:14px}
+      .boards{grid-template-columns:1fr}
+      .facts{grid-template-columns:repeat(2,1fr)}
+      h1{font-size:27px}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🩺 台股健診雷達</h1>
+  <div class="muted">只顯示最新快照，不保存歷史。研究歷史留在後台，本頁只回答「現在怎麼樣」。</div>
+
+  <div class="topline">
+    <div class="metric"><span class="muted">🔥 火藥桶</span><b id="fireCount">—</b></div>
+    <div class="metric"><span class="muted">🩺 修正中</span><b id="recoveryCount">—</b></div>
+    <div class="metric"><span class="muted">最新資料日期</span><b id="dataDate">—</b></div>
+    <div class="metric"><span class="muted">雲端股票數</span><b id="stockCount">—</b></div>
+  </div>
+
+  <h2>🔎 個股健診</h2>
+  <div class="search">
+    <input id="searchInput" list="stockSuggestions" placeholder="輸入股票代號或名稱，例如 2330">
+    <datalist id="stockSuggestions"></datalist>
+    <button id="searchBtn">健診</button>
+  </div>
+
+  <div id="result" class="result"></div>
+
+  <div class="boards">
+    <section class="board">
+      <div class="boardhead">
+        <h2>🔥 火藥桶名單</h2>
+      </div>
+      <div class="legend">
+        🔴 高風險 Crash Watch　🟠 多重過熱／火藥桶　🟡 過熱觀察
+        <br>表格右下角可以直接拖曳，自由拉高。
+      </div>
+      <div class="tablebox">
+        <table>
+          <thead>
+            <tr>
+              <th>燈號</th>
+              <th>代號</th>
+              <th>名稱</th>
+              <th>Lifecycle</th>
+              <th>分數</th>
+            </tr>
+          </thead>
+          <tbody id="fireRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="board">
+      <div class="boardhead">
+        <h2>🩺 修正中健診</h2>
+        <select id="recoveryFilter" style="width:130px">
+          <option>全部</option>
+          <option>HIGH</option>
+          <option>MID</option>
+          <option>LOW</option>
+          <option>WAITING</option>
+        </select>
+      </div>
+      <div class="legend">
+        🔴 HIGH 恢復失敗風險高　🟡 MID 觀察中　🟢 LOW 較像健康修正　⚪ WAITING 尚未到 D+5
+        <br>表格右下角可以直接拖曳，自由拉高。
+      </div>
+      <div class="tablebox">
+        <table>
+          <thead>
+            <tr>
+              <th>燈號</th>
+              <th>代號</th>
+              <th>名稱</th>
+              <th>Band</th>
+              <th>D+</th>
+              <th>Vital</th>
+              <th>距高點</th>
+              <th>Campaign</th>
+            </tr>
+          </thead>
+          <tbody id="recoveryRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    模型輸出為統計健診與風險分類，不代表保證漲跌。雲端只保存目前最新快照。
+    <span id="generatedAt"></span>
+  </footer>
+</div>
+
+<script>
+let PAYLOAD = null;
+let STOCKS = [];
+let STOCK_MAP = new Map();
+
+function esc(x){
+  return String(x ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
+}
+
+function pct(x, digits=1){
+  if(x === null || x === undefined || Number.isNaN(Number(x))) return "—";
+  return (Number(x)*100).toFixed(digits) + "%";
+}
+
+function num(x, digits=3){
+  if(x === null || x === undefined || Number.isNaN(Number(x))) return "—";
+  return Number(x).toFixed(digits);
+}
+
+function plainDiagnosis(s){
+  if(!s.recovery_active){
+    return "目前沒有 Recovery Vitality 病歷。";
+  }
+
+  const b = (s.recovery_band || "").toUpperCase();
+
+  if(b === "LOW") return "目前較像健康修正，買氣仍有恢復力。";
+  if(b === "MID") return "目前屬於觀察區，買氣有受損，但還不能判成恢復失敗。";
+  if(b === "HIGH") return "目前恢復失敗風險偏高，買氣與價格修復明顯轉弱。";
+  if(b === "WAITING") return "目前正在修正，但尚未到 D+5，先不做正式判讀。";
+  if(b.includes("OUT_OF_VALIDATED")) return "目前有修正病歷，但不在已驗證的主流動性 Universe 內。";
+  if(b.includes("SPECIAL")) return "目前屬特殊價格路徑，不套用正常 LOW / MID / HIGH 健診。";
+
+  return "目前有修正病歷，但沒有可用的正式健診分級。";
+}
+
+function showStock(s){
+  const el = document.getElementById("result");
+
+  if(!s){
+    el.className = "result show";
+    el.innerHTML = "<b>找不到這支股票的最新雷達狀態。</b>";
+    return;
+  }
+
+  const crash = s.crash_active
+    ? `🔥 ${esc(s.crash_light)} Crash Setup`
+    : "Crash Setup：未列入";
+
+  const rec = s.recovery_active
+    ? `🩺 ${esc(s.recovery_light)} Recovery ${esc(s.recovery_band)}`
+    : "Recovery：無病歷";
+
+  const ow = s.oneway_active
+    ? `⚠ One-Way ${esc(s.oneway_band || "ACTIVE")}`
+    : "One-Way：未列入";
+
+  const kr = s.key_red_k
+    ? "🟥 Key Red K"
+    : "Key Red K：未觸發";
+
+  el.className = "result show";
+  el.innerHTML = `
+    <h2>${esc(s.stock_id)} ${esc(s.stock_name)}</h2>
+    <div class="small">Lifecycle：${esc(s.lifecycle_stage || "—")}</div>
+    <div class="badges">
+      <span class="badge">${crash}</span>
+      <span class="badge">${rec}</span>
+      <span class="badge">${ow}</span>
+      <span class="badge">${kr}</span>
+    </div>
+    <div style="margin:10px 0">${esc(plainDiagnosis(s))}</div>
+    <div class="facts">
+      <div class="fact"><span>Recovery Vitality</span><b>${num(s.vital_score)}</b></div>
+      <div class="fact"><span>距 Damage 高點</span><b>${pct(s.drawdown_from_anchor_peak)}</b></div>
+      <div class="fact"><span>Campaign 漲幅</span><b>${pct(s.campaign_gain_from_base)}</b></div>
+      <div class="fact"><span>Damage 日數</span><b>${esc(s.days_since_damage ?? "—")}</b></div>
+      <div class="fact"><span>前高修復風險</span><b>${num(s.family_peak)}</b></div>
+      <div class="fact"><span>相對強度衰退</span><b>${num(s.family_rs)}</b></div>
+      <div class="fact"><span>資金撤退</span><b>${num(s.family_money)}</b></div>
+      <div class="fact"><span>反彈疲弱</span><b>${num(s.family_rebound)}</b></div>
+    </div>
+  `;
+}
+
+function searchStock(){
+  const raw = document.getElementById("searchInput").value.trim();
+  if(!raw) return;
+
+  let q = raw.split(/\s+/)[0];
+  let s = STOCK_MAP.get(q);
+
+  if(!s){
+    const lower = raw.toLowerCase();
+    s = STOCKS.find(x =>
+      String(x.stock_name || "").toLowerCase() === lower ||
+      String(x.stock_name || "").toLowerCase().includes(lower)
+    );
+  }
+
+  showStock(s);
+}
+
+function renderFire(){
+  const ids = PAYLOAD.firebarrel_ids || [];
+  const body = document.getElementById("fireRows");
+
+  body.innerHTML = ids.map(id => {
+    const s = STOCK_MAP.get(id);
+    if(!s) return "";
+
+    return `
+      <tr>
+        <td class="light">${esc(s.crash_light)}</td>
+        <td>${esc(s.stock_id)}</td>
+        <td>${esc(s.stock_name)}</td>
+        <td>${esc(s.crash_stage || s.lifecycle_stage || "—")}</td>
+        <td>${num(s.crash_score)}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderRecovery(){
+  const selected = document.getElementById("recoveryFilter").value;
+  const ids = PAYLOAD.recovery_ids || [];
+
+  const list = ids
+    .map(id => STOCK_MAP.get(id))
+    .filter(Boolean)
+    .filter(s => selected === "全部" || s.recovery_band === selected);
+
+  document.getElementById("recoveryRows").innerHTML = list.map(s => `
+    <tr>
+      <td class="light">${esc(s.recovery_light)}</td>
+      <td>${esc(s.stock_id)}</td>
+      <td>${esc(s.stock_name)}</td>
+      <td>${esc(s.recovery_band || "—")}</td>
+      <td>${esc(s.days_since_damage ?? "—")}</td>
+      <td>${num(s.vital_score)}</td>
+      <td>${pct(s.drawdown_from_anchor_peak)}</td>
+      <td>${pct(s.campaign_gain_from_base)}</td>
+    </tr>
+  `).join("");
+}
+
+async function boot(){
+  try{
+    const r = await fetch("data/latest_stock_health.json?t=" + Date.now(), {cache:"no-store"});
+    PAYLOAD = await r.json();
+
+    STOCKS = PAYLOAD.stocks || [];
+    STOCK_MAP = new Map(STOCKS.map(s => [String(s.stock_id), s]));
+
+    const md = PAYLOAD.metadata || {};
+
+    document.getElementById("fireCount").textContent = md.firebarrel_count ?? 0;
+    document.getElementById("recoveryCount").textContent = md.recovery_count ?? 0;
+    document.getElementById("dataDate").textContent = md.data_date || "—";
+    document.getElementById("stockCount").textContent = md.stock_count ?? STOCKS.length;
+    document.getElementById("generatedAt").textContent =
+      md.generated_at ? "　快照產生：" + md.generated_at : "";
+
+    const dl = document.getElementById("stockSuggestions");
+    dl.innerHTML = STOCKS.map(s =>
+      `<option value="${esc(s.stock_id)} ${esc(s.stock_name)}"></option>`
+    ).join("");
+
+    renderFire();
+    renderRecovery();
+
+    if(md.status === "not_built"){
+      showStock(null);
+    }
+  }catch(e){
+    const el = document.getElementById("result");
+    el.className = "result show";
+    el.innerHTML = `
+      <b>尚未建立雲端快照。</b>
+      <div class="small" style="margin-top:6px">
+        請先在本機執行 BUILD_CLOUD_SNAPSHOT.bat。
+      </div>
+    `;
+  }
+}
+
+document.getElementById("searchBtn").addEventListener("click", searchStock);
+document.getElementById("searchInput").addEventListener("keydown", e => {
+  if(e.key === "Enter") searchStock();
+});
+document.getElementById("recoveryFilter").addEventListener("change", renderRecovery);
+
+boot();
+</script>
+</body>
+</html>
