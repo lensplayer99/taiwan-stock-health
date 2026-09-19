@@ -12,6 +12,12 @@ export const LAMPS=[
 ];
 export const COUNTS={positive_lights:'正向紅燈',negative_lights:'負向綠燈',new_positive_today:'資料日新增紅燈',new_lights_today:'資料日新亮燈',lights_off_today:'資料日熄燈',chip_positive:'籌碼正向',chip_negative:'籌碼負向',price_positive:'量價正向',price_negative:'量價負向',market_relative_positive:'大盤相對正向',market_relative_negative:'大盤相對負向',sector_relative_positive:'族群相對正向',sector_relative_negative:'族群相對負向',risk_count:'風險燈',available_light_count:'可用燈號',missing_lights:'資料不足',transition_unknown_count:'前次比較未知'};
 export const RANKING_ORDER=['positive_lights DESC','new_positive_today DESC','negative_lights ASC','stock_id ASC'];
+export const RANKING_DISPLAY_LIMIT=50;
+export const RANKING_PAGE_SIZE=20;
+export function rankingPage(rows,visible=RANKING_PAGE_SIZE,limit=RANKING_DISPLAY_LIMIT){
+  const total=Math.min(rows.length,limit),shown=Math.min(total,Math.max(0,Number.isInteger(visible)?visible:RANKING_PAGE_SIZE)),nextShown=Math.min(total,shown+RANKING_PAGE_SIZE);
+  return {rows:rows.slice(0,shown),shown,total,nextShown,hasMore:shown<total,moreLabel:`顯示更多（${shown+1}–${nextShown}）`,progressLabel:`目前已顯示 ${shown} / ${total} 名${total<limit?`（保存榜單共 ${total} 名）`:''}`};
+}
 const lampName=lamp=>`${lamp.name}${lamp.window?` ${lamp.window} 日`:''}`;
 const badge=state=>`<span class="signal-badge ${state.toLowerCase()}">${state==='MISSING'?'?':'●'} ${esc(STATES[state])}</span>`;
 const validId=id=>typeof id==='string'&&/^[A-Za-z0-9]+$/.test(id);
@@ -44,12 +50,12 @@ export function validateSignalRow(row,date){
 }
 export function rowsEqual(a,b){return !!a&&!!b&&['stock_id','name','market','date','eligible','total_light_count',...Object.keys(COUNTS)].every(key=>a[key]===b[key])&&LAMPS.every(l=>a.light_states[l.id]===b.light_states[l.id]);}
 export function validateRanking(summary,ranking){
-  if(!Array.isArray(summary.stocks)||!Array.isArray(ranking.rows)||ranking.title!=='今日正向紅燈最多'||ranking.display_limit!==20||ranking.row_count!==ranking.rows.length||JSON.stringify(ranking.order)!==JSON.stringify(RANKING_ORDER))throw dataError();
+  if(!Array.isArray(summary.stocks)||!Array.isArray(ranking.rows)||ranking.title!=='今日正向紅燈最多'||ranking.display_limit!==RANKING_DISPLAY_LIMIT||ranking.row_count!==ranking.rows.length||JSON.stringify(ranking.order)!==JSON.stringify(RANKING_ORDER))throw dataError();
   const date=summary.signal_as_of||summary.as_of,byStock=new Map();
   for(const row of summary.stocks){validateSignalRow(row,date);if(byStock.has(row.stock_id))throw dataError();byStock.set(row.stock_id,row);}
   const seen=new Set();for(const row of ranking.rows){if(!rowsEqual(row,byStock.get(row?.stock_id))||seen.has(row.stock_id)||!row.eligible||!row.available_light_count)throw dataError();seen.add(row.stock_id);}
   if(summary.stocks.some(row=>row.eligible&&row.available_light_count>0&&!seen.has(row.stock_id)))throw dataError();
-  return {byStock,rows:ranking.rows.slice(0,20),date};
+  return {byStock,rows:ranking.rows,date};
 }
 export function filterRows(rows,filter){
   if(!Array.isArray(filter.states)||!Array.isArray(filter.counts)||filter.states.some(c=>!LAMPS.some(l=>l.id===c.id)||!Object.hasOwn(STATES,c.state))||filter.counts.some(c=>!Object.hasOwn(COUNTS,c.field)||[c.min,c.max].some(v=>v!==null&&(!Number.isInteger(v)||v<0||v>40))||(c.min!==null&&c.max!==null&&c.min>c.max)))throw Error('燈數須為 0 至 40，最小值不能大於最大值。');
@@ -75,7 +81,7 @@ const hashValue=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 export function validateManifest(value,now=new Date()){
   const today=taipeiDate(now);
   if(!Number.isInteger(value?.stock_count)||value.stock_count<0||value.stock_count>20000||!Number.isInteger(value?.ranking_count)||value.ranking_count<0||value.ranking_count>value.stock_count||!Array.isArray(value?.limits)||value.limits.length>40||value.limits.some(note=>typeof note!=='string'||note.length>2000)||value.market_as_of!==value.as_of)throw dataError();
-  if(!value||value.schema!==SCHEMAS.manifest||value.version!==VERSION||typeof value.build_id!=='string'||!/^[A-Za-z0-9_-]{1,180}$/.test(value.build_id)||!validDate(value.as_of)||value.as_of>today||!validDate(value.stock_as_of)||!validDate(value.signal_as_of)||value.stock_as_of!==value.as_of||value.signal_as_of!==value.as_of||value.market_as_of!==null&&(!validDate(value.market_as_of)||value.market_as_of>today)||value.rule_version!==RULE_VERSION||value.rule_sha256!==RULE_SHA256||value.display_limit!==20||!value.files||typeof value.files!=='object'||Array.isArray(value.files))throw dataError();
+  if(!value||value.schema!==SCHEMAS.manifest||value.version!==VERSION||typeof value.build_id!=='string'||!/^[A-Za-z0-9_-]{1,180}$/.test(value.build_id)||!validDate(value.as_of)||value.as_of>today||!validDate(value.stock_as_of)||!validDate(value.signal_as_of)||value.stock_as_of!==value.as_of||value.signal_as_of!==value.as_of||value.market_as_of!==null&&(!validDate(value.market_as_of)||value.market_as_of>today)||value.rule_version!==RULE_VERSION||value.rule_sha256!==RULE_SHA256||value.display_limit!==RANKING_DISPLAY_LIMIT||!value.files||typeof value.files!=='object'||Array.isArray(value.files))throw dataError();
   for(const [resource,entry] of Object.entries(value.files)){
     if(!['index.html','research.css','research.js'].includes(resource)&&!allowedResource(resource))throw dataError();
     if(resource==='public_manifest.json'||!entry||!hashValue(entry.sha256)||!Number.isInteger(entry.bytes)||entry.bytes<2||entry.bytes>30000000)throw dataError();
@@ -143,6 +149,13 @@ function init(){
   const byId=id=>document.getElementById(id);
   let manifest=null,read=null,stocks=[],summary=null,ranking=null,market=null,signal=null,route=parseRoute(location.hash),routeReady=false,selectionGeneration=0,buildReady=false,buildFailed=false;
   let filter={states:[],counts:[]},filterLimit=100;
+  let rankingVisible=RANKING_PAGE_SIZE;
+  const paintRanking=()=>{
+    byId('rankingControls').hidden=!signal;
+    if(!signal){byId('rankingRows').innerHTML=empty('榜單與摘要尚未通過同一發布版本核對，暫停顯示排名。');return;}
+    const page=rankingPage(signal.rows,rankingVisible);
+    byId('rankingRows').innerHTML=renderRows(page.rows,true);byId('rankingProgress').textContent=page.progressLabel;byId('rankingMore').hidden=!page.hasMore;byId('rankingMore').textContent=page.moreLabel;
+  };
   const detailCache=createResourceCache(),scrollPositions=new Map();
   const hideSuggestions=()=>{byId('stockSuggestions').hidden=true;byId('stockQuery').setAttribute('aria-expanded','false');};
   const suggestions=()=>{const matches=searchStocks(stocks,byId('stockQuery').value);byId('stockSuggestions').innerHTML=matches.map(stock=>`<a class="stock-pick" href="#stock/${esc(stock.stock_id)}">${esc(stock.stock_id)} ${esc(stock.name)}</a>`).join('');byId('stockSuggestions').hidden=!matches.length;byId('stockQuery').setAttribute('aria-expanded',String(!!matches.length));};
@@ -163,6 +176,7 @@ function init(){
     const next=parseRoute(location.hash),changed=!routeReady||next.hash!==route.hash;
     if(routeReady&&changed)scrollPositions.set(route.hash,window.scrollY);
     route=next;routeReady=true;
+    if(changed&&['home','stocks'].includes(route.page)){rankingVisible=RANKING_PAGE_SIZE;paintRanking();}
     if(location.hash!==route.hash)history.replaceState(null,'',`${location.pathname}${location.search}${route.hash}`);
     const detail=route.page==='stock',isMarket=route.page==='market',tab=detail?'stocks':route.page;
     document.body.dataset.route=route.page;byId('stockListView').hidden=detail||isMarket;byId('marketView').hidden=!isMarket;byId('stockDetailView').hidden=!detail;byId('homeMarketSection').hidden=route.page!=='home';
@@ -187,7 +201,8 @@ function init(){
   const presets=[{label:'投信＋買超分點＋量能 5 日紅',states:[{id:'trust_5',state:'RED'},{id:'broker_buy_5',state:'RED'},{id:'volume_5',state:'RED'}],counts:[]},{label:'紅 ≥ 8、綠 ≤ 2',states:[],counts:[{field:'positive_lights',min:8,max:null},{field:'negative_lights',min:null,max:2}]},{label:'資料日新增紅 ≥ 3',states:[],counts:[{field:'new_positive_today',min:3,max:null}]}];
   const setFilter=value=>{filter=structuredClone(value);filterLimit=100;byId('stateConditions').replaceChildren();byId('countConditions').replaceChildren();filter.states.forEach(addState);filter.counts.forEach(addCount);paintFilter();};
   byId('stockSearch').addEventListener('submit',event=>{event.preventDefault();const query=byId('stockQuery').value.trim().toLocaleLowerCase('zh-TW'),exact=stocks.filter(stock=>stock.stock_id.toLocaleLowerCase('zh-TW')===query||stock.name.toLocaleLowerCase('zh-TW')===query),matches=exact.length?exact:searchStocks(stocks,query,Infinity);if(query&&matches.length===1){byId('searchStatus').textContent='';location.hash=`#stock/${matches[0].stock_id}`;}else{byId('searchStatus').textContent=matches.length>1?'有多檔符合，請選擇建議或輸入完整代號。':buildReady?'查無此股票。請嘗試代號、完整或部分名稱。':'搜尋資料尚未載入。';suggestions();}});
-  byId('stockQuery').addEventListener('input',suggestions);byId('stockQuery').addEventListener('keydown',event=>{if(event.key==='Escape')hideSuggestions();});
+  byId('stockQuery').addEventListener('input',()=>{byId('searchStatus').textContent='';suggestions();});byId('stockQuery').addEventListener('keydown',event=>{if(event.key==='Escape')hideSuggestions();});
+  byId('rankingMore').addEventListener('click',()=>{if(!signal)return;rankingVisible=rankingPage(signal.rows,rankingVisible).nextShown;paintRanking();});
   byId('addState').addEventListener('click',()=>addState());byId('addCount').addEventListener('click',()=>addCount());
   byId('filterForm').addEventListener('click',event=>{const button=event.target.closest('[data-remove-condition]');if(button)button.closest('.signal-condition').remove();});
   byId('filterForm').addEventListener('submit',event=>{event.preventDefault();filter={states:[...byId('stateConditions').children].map(line=>({id:line.querySelector('[data-filter-id]').value,state:line.querySelector('[data-filter-state]').value})),counts:[...byId('countConditions').children].map(line=>{const min=line.querySelector('[data-filter-min]').value,max=line.querySelector('[data-filter-max]').value;return {field:line.querySelector('[data-filter-field]').value,min:min===''?null:Number(min),max:max===''?null:Number(max)};})};filterLimit=100;paintFilter();});
@@ -206,8 +221,8 @@ function init(){
       for(let i=0;i<results.length;i++){const result=results[i],kind=Object.keys(fixedResources)[i];if(result.status==='rejected'){failures.push(kind);continue;}try{const body=result.value.body;if(kind==='market'){if(!Array.isArray(body.markets))throw dataError();market=body;}if(kind==='search')stocks=validateSearch(body,manifest);if(kind==='summary')summary=body;if(kind==='ranking')ranking=body;}catch{failures.push(kind);}}
       if(summary&&ranking){try{signal=validateRanking(summary,ranking);if(ranking.row_count!==manifest.ranking_count)throw dataError();}catch{signal=null;failures.push('ranking');}}
       byId('homeMarketSummary').innerHTML=renderMarket(market,true);byId('marketCards').innerHTML=renderMarket(market);byId('marketResearch').innerHTML=renderMarketResearch(market);byId('marketDate').textContent=market?`大盤資料日 ${market.market_as_of||manifest.market_as_of}。市場狀態：${statusLabel(market.session_status)}。`:'大盤摘要目前無法讀取。';byId('marketNotes').textContent='以上僅描述已保存的市場狀態；不同市場的資料日可能不同。觀察資料尚待驗證，指數與個股訊號不能換算為投資勝率。';
-      byId('rankingRows').innerHTML=signal?renderRows(signal.rows,true):empty('榜單與摘要尚未通過同一發布版本核對，暫停顯示排名。');
-      byId('rankingDate').textContent=signal?`資料日 ${signal.date}，顯示完整保存排名的前 ${signal.rows.length} 名；新增／熄燈皆是該資料日的比較，不表示今天發出新訊號。`:'排名資料目前無法讀取。';
+      paintRanking();
+      byId('rankingDate').textContent=signal?`資料日 ${signal.date}，顯示完整保存排名的前 ${Math.min(signal.rows.length,RANKING_DISPLAY_LIMIT)} 名（分段顯示）；新增／熄燈皆是該資料日的比較，不表示今天發出新訊號。`:'排名資料目前無法讀取。';
       byId('loadStatus').textContent=failures.length?'部分已發布資料目前無法核對，受影響區塊暫停顯示；其餘區塊保持同一發布版本。':'已讀取同一發布版本的保存資料；切換頁面不會重新計算研究結果。';byId('loadStatus').classList.toggle('error',failures.length>0);
       buildReady=true;paintFilter();applyRoute({reloadDetail:true});
     }catch(error){buildFailed=true;byId('loadStatus').textContent=error.message;byId('loadStatus').classList.add('error');byId('rankingRows').innerHTML=empty('公開保存資料尚未就緒。');byId('homeMarketSummary').innerHTML=empty('大盤摘要尚未就緒。');byId('marketCards').innerHTML=empty('大盤摘要尚未就緒。');byId('detailStatus').textContent='此發布版本尚未通過核對，個股明細暫停顯示。';paintFilter();}
