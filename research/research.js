@@ -18,6 +18,12 @@ export function rankingPage(rows,visible=RANKING_PAGE_SIZE,limit=RANKING_DISPLAY
   const total=Math.min(rows.length,limit),shown=Math.min(total,Math.max(0,Number.isInteger(visible)?visible:RANKING_PAGE_SIZE)),nextShown=Math.min(total,shown+RANKING_PAGE_SIZE);
   return {rows:rows.slice(0,shown),shown,total,nextShown,hasMore:shown<total,moreLabel:`顯示更多（${shown+1}–${nextShown}）`,progressLabel:`目前已顯示 ${shown} / ${total} 名${total<limit?`（保存榜單共 ${total} 名）`:''}`};
 }
+export const RANKING_MARKETS={TWSE:'上市',TPEX:'上櫃'};
+export function marketRankingPage(rows,market,visible=RANKING_PAGE_SIZE){
+  if(!Object.hasOwn(RANKING_MARKETS,market))throw Error('榜單市場無效。');
+  const savedMarketRows=rows.filter(row=>row.market===market),page=rankingPage(savedMarketRows,visible),unknownCount=rows.filter(row=>!Object.hasOwn(RANKING_MARKETS,row.market)).length;
+  return {...page,market,marketRowCount:savedMarketRows.length,unknownCount,progressLabel:`${RANKING_MARKETS[market]}：${page.progressLabel}`,scopeLabel:`依保存的市場分類，各自從完整排名取前 50 名，維持保存順序。${unknownCount?`另有 ${unknownCount} 檔市場分類未提供，未列入任一榜。`:'未提供市場分類者不列入任一榜。'}`};
+}
 const lampName=lamp=>`${lamp.name}${lamp.window?` ${lamp.window} 日`:''}`;
 const badge=state=>`<span class="signal-badge ${state.toLowerCase()}">${state==='MISSING'?'?':'●'} ${esc(STATES[state])}</span>`;
 const validId=id=>typeof id==='string'&&/^[A-Za-z0-9]+$/.test(id);
@@ -149,11 +155,13 @@ function init(){
   const byId=id=>document.getElementById(id);
   let manifest=null,read=null,stocks=[],summary=null,ranking=null,market=null,signal=null,route=parseRoute(location.hash),routeReady=false,selectionGeneration=0,buildReady=false,buildFailed=false;
   let filter={states:[],counts:[]},filterLimit=100;
-  let rankingVisible=RANKING_PAGE_SIZE;
+  let rankingMarket='TWSE',rankingVisible={TWSE:RANKING_PAGE_SIZE,TPEX:RANKING_PAGE_SIZE};
   const paintRanking=()=>{
     byId('rankingControls').hidden=!signal;
+    for(const market of Object.keys(RANKING_MARKETS)){const button=byId(`ranking${market}`),active=market===rankingMarket;button.disabled=!signal;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));}
     if(!signal){byId('rankingRows').innerHTML=empty('榜單與摘要尚未通過同一發布版本核對，暫停顯示排名。');return;}
-    const page=rankingPage(signal.rows,rankingVisible);
+    const page=marketRankingPage(signal.rows,rankingMarket,rankingVisible[rankingMarket]);
+    byId('rankingHeading').textContent=`今日正向紅燈最多｜${RANKING_MARKETS[rankingMarket]} Top 50`;byId('rankingScope').textContent=page.scopeLabel;
     byId('rankingRows').innerHTML=renderRows(page.rows,true);byId('rankingProgress').textContent=page.progressLabel;byId('rankingMore').hidden=!page.hasMore;byId('rankingMore').textContent=page.moreLabel;
   };
   const detailCache=createResourceCache(),scrollPositions=new Map();
@@ -176,7 +184,7 @@ function init(){
     const next=parseRoute(location.hash),changed=!routeReady||next.hash!==route.hash;
     if(routeReady&&changed)scrollPositions.set(route.hash,window.scrollY);
     route=next;routeReady=true;
-    if(changed&&['home','stocks'].includes(route.page)){rankingVisible=RANKING_PAGE_SIZE;paintRanking();}
+    if(changed&&['home','stocks'].includes(route.page)){rankingVisible={TWSE:RANKING_PAGE_SIZE,TPEX:RANKING_PAGE_SIZE};paintRanking();}
     if(location.hash!==route.hash)history.replaceState(null,'',`${location.pathname}${location.search}${route.hash}`);
     const detail=route.page==='stock',isMarket=route.page==='market',tab=detail?'stocks':route.page;
     document.body.dataset.route=route.page;byId('stockListView').hidden=detail||isMarket;byId('marketView').hidden=!isMarket;byId('stockDetailView').hidden=!detail;byId('homeMarketSection').hidden=route.page!=='home';
@@ -202,7 +210,8 @@ function init(){
   const setFilter=value=>{filter=structuredClone(value);filterLimit=100;byId('stateConditions').replaceChildren();byId('countConditions').replaceChildren();filter.states.forEach(addState);filter.counts.forEach(addCount);paintFilter();};
   byId('stockSearch').addEventListener('submit',event=>{event.preventDefault();const query=byId('stockQuery').value.trim().toLocaleLowerCase('zh-TW'),exact=stocks.filter(stock=>stock.stock_id.toLocaleLowerCase('zh-TW')===query||stock.name.toLocaleLowerCase('zh-TW')===query),matches=exact.length?exact:searchStocks(stocks,query,Infinity);if(query&&matches.length===1){byId('searchStatus').textContent='';location.hash=`#stock/${matches[0].stock_id}`;}else{byId('searchStatus').textContent=matches.length>1?'有多檔符合，請選擇建議或輸入完整代號。':buildReady?'查無此股票。請嘗試代號、完整或部分名稱。':'搜尋資料尚未載入。';suggestions();}});
   byId('stockQuery').addEventListener('input',()=>{byId('searchStatus').textContent='';suggestions();});byId('stockQuery').addEventListener('keydown',event=>{if(event.key==='Escape')hideSuggestions();});
-  byId('rankingMore').addEventListener('click',()=>{if(!signal)return;rankingVisible=rankingPage(signal.rows,rankingVisible).nextShown;paintRanking();});
+  byId('rankingMore').addEventListener('click',()=>{if(!signal)return;rankingVisible[rankingMarket]=marketRankingPage(signal.rows,rankingMarket,rankingVisible[rankingMarket]).nextShown;paintRanking();});
+  for(const market of Object.keys(RANKING_MARKETS))byId(`ranking${market}`).addEventListener('click',()=>{if(!signal)return;rankingMarket=market;paintRanking();});
   byId('addState').addEventListener('click',()=>addState());byId('addCount').addEventListener('click',()=>addCount());
   byId('filterForm').addEventListener('click',event=>{const button=event.target.closest('[data-remove-condition]');if(button)button.closest('.signal-condition').remove();});
   byId('filterForm').addEventListener('submit',event=>{event.preventDefault();filter={states:[...byId('stateConditions').children].map(line=>({id:line.querySelector('[data-filter-id]').value,state:line.querySelector('[data-filter-state]').value})),counts:[...byId('countConditions').children].map(line=>{const min=line.querySelector('[data-filter-min]').value,max=line.querySelector('[data-filter-max]').value;return {field:line.querySelector('[data-filter-field]').value,min:min===''?null:Number(min),max:max===''?null:Number(max)};})};filterLimit=100;paintFilter();});
@@ -222,7 +231,7 @@ function init(){
       if(summary&&ranking){try{signal=validateRanking(summary,ranking);if(ranking.row_count!==manifest.ranking_count)throw dataError();}catch{signal=null;failures.push('ranking');}}
       byId('homeMarketSummary').innerHTML=renderMarket(market,true);byId('marketCards').innerHTML=renderMarket(market);byId('marketResearch').innerHTML=renderMarketResearch(market);byId('marketDate').textContent=market?`大盤資料日 ${market.market_as_of||manifest.market_as_of}。市場狀態：${statusLabel(market.session_status)}。`:'大盤摘要目前無法讀取。';byId('marketNotes').textContent='以上僅描述已保存的市場狀態；不同市場的資料日可能不同。觀察資料尚待驗證，指數與個股訊號不能換算為投資勝率。';
       paintRanking();
-      byId('rankingDate').textContent=signal?`資料日 ${signal.date}，顯示完整保存排名的前 ${Math.min(signal.rows.length,RANKING_DISPLAY_LIMIT)} 名（分段顯示）；新增／熄燈皆是該資料日的比較，不表示今天發出新訊號。`:'排名資料目前無法讀取。';
+      byId('rankingDate').textContent=signal?`資料日 ${signal.date}，上市／上櫃各取完整保存排名的前 50 名（分段顯示）；新增／熄燈皆是該資料日的比較，不表示今天發出新訊號。`:'排名資料目前無法讀取。';
       byId('loadStatus').textContent=failures.length?'部分已發布資料目前無法核對，受影響區塊暫停顯示；其餘區塊保持同一發布版本。':'已讀取同一發布版本的保存資料；切換頁面不會重新計算研究結果。';byId('loadStatus').classList.toggle('error',failures.length>0);
       buildReady=true;paintFilter();applyRoute({reloadDetail:true});
     }catch(error){buildFailed=true;byId('loadStatus').textContent=error.message;byId('loadStatus').classList.add('error');byId('rankingRows').innerHTML=empty('公開保存資料尚未就緒。');byId('homeMarketSummary').innerHTML=empty('大盤摘要尚未就緒。');byId('marketCards').innerHTML=empty('大盤摘要尚未就緒。');byId('detailStatus').textContent='此發布版本尚未通過核對，個股明細暫停顯示。';paintFilter();}
