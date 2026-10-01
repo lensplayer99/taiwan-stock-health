@@ -6,8 +6,8 @@
   <meta name="color-scheme" content="dark">
   <meta name="description" content="台股健診雷達的公開研究觀察：已保存的大盤、個股訊號、排名與研究摘要。研究觀察資訊，非投資建議。">
   <title>首頁｜台股健診雷達</title>
-  <link rel="stylesheet" href="./research.css?v=net-lights-20260920-v1">
-  <script type="module" src="./research.js?v=net-lights-20260920-v1"></script>
+  <link rel="stylesheet" href="./research.css?v=market-margin-20261001-v1">
+  <script type="module" src="./research.js?v=market-margin-20261001-v1"></script>
 </head>
 <body data-route="home">
 <main class="wrap">
@@ -33,7 +33,7 @@
     <section id="homeMarketSection" aria-labelledby="homeMarketHeading"><div class="section-heading"><h3 id="homeMarketHeading">大盤摘要</h3><a href="#market" class="text-link">查看大盤觀察 →</a></div><div id="homeMarketSummary" class="market-cards"></div></section>
     <section aria-labelledby="researchSummaryHeading"><h3 id="researchSummaryHeading">研究摘要與限制</h3><div id="researchSummary" class="notice">研究估計尚待驗證；資料缺漏、尚未成熟與不同資料日期會分開標示。</div></section>
   </div>
-  <section id="marketView" hidden aria-label="大盤觀察"><p id="marketDate" class="signal-date"></p><div id="marketCards" class="market-cards"></div><div id="marketResearch"></div><div id="marketNotes" class="notice"></div></section>
+  <section id="marketView" hidden aria-label="大盤觀察"><p id="marketDate" class="signal-date"></p><div id="marketCards" class="market-cards"></div><section id="marketMargin" class="card detail-section"></section><div id="marketResearch"></div><div id="marketNotes" class="notice"></div></section>
   <div id="stockDetailView" hidden><a class="return-list" href="#stocks">← 返回個股列表</a><p id="detailStatus" class="load-status" role="status" aria-live="polite"></p><section id="stockDetail"></section></div>
   <footer class="public-footer"><p>研究觀察資訊，非投資建議。公開頁面呈現已保存資料，資料日與發布時間可能不同。灰燈或資料不足不代表零風險。</p><p id="publicationFooter" class="small muted"></p></footer>
 </main>

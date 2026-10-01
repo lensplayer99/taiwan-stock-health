@@ -14,3 +14,17 @@
 /* Each market is a saved-order view of the complete ranking. */
 .ranking-market-switch{display:flex;gap:8px;margin:12px 0 8px}.ranking-market-button{padding:10px 18px;border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--muted);font-size:14px}.ranking-market-button:hover{color:var(--text);background:var(--panel2)}.ranking-market-button.active{color:var(--accent);border-color:#35557e;background:#17283f}@media(max-width:700px){.ranking-market-button{flex:1;padding:11px 9px}}
 .signal-net{font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.market-v2-card .market-reading{font-variant-numeric:tabular-nums;font-size:clamp(2.1rem,4vw,3.2rem);letter-spacing:-.03em}
+.market-unit{font-size:1rem;color:var(--muted,#a7b7ca);letter-spacing:0}
+.quote-change{font-variant-numeric:tabular-nums;font-weight:650;font-size:1.1rem;margin:6px 0 14px}
+.research-position{border-top:1px solid #344354;margin-top:20px;padding-top:17px}
+.research-position h4{margin:0}.research-position .facts{margin-top:14px}
+.market-estimates{margin-top:26px}.market-model-table{min-width:1040px;font-size:.86rem}
+.market-model-table th,.market-model-table td{padding:13px 12px;vertical-align:top}
+.market-model-table small{display:block;max-width:260px;overflow-wrap:anywhere;color:#a6b2c6;margin-top:6px}
+.market-model-table details p{min-width:220px;max-width:310px;overflow-wrap:anywhere}
+.forecast-history{padding:16px 0;margin-top:10px}.forecast-history summary{cursor:pointer;color:#9dccff}
+@media(max-width:600px){.market-v2-card{padding:18px}.market-v2-card .market-reading{font-size:2.3rem}.research-position .card-head{align-items:flex-start;gap:10px}.market-estimates h4{line-height:1.6}}
+
+#marketMargin .waters{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}#marketMargin .water{padding:16px;background:#172437;border-radius:12px}#marketMargin .water strong{font-size:26px;display:block}#marketMargin .sub,#marketMargin small{color:#adc0d6}#marketMargin small{display:block}#marketMargin .controls,#marketMargin .legend{display:flex;flex-wrap:wrap;gap:14px;margin:16px 0}#marketMargin label{display:block}#marketMargin input,#marketMargin select,#marketMargin button{max-width:100%;font:inherit}#marketMargin svg{width:100%;touch-action:pan-y}#marketMargin .blue{color:#61b5ff}#marketMargin .amber,#fixedAnchorError{color:#f0c267}#fixedDetail{background:#091522;padding:12px;min-height:60px}#marketMargin details{margin:18px 0}#marketMargin .chart-empty{min-height:220px;padding:22px;border:1px dashed #526581}#marketMargin *{box-sizing:border-box}@media(max-width:700px){#marketMargin .waters{grid-template-columns:1fr}#marketMargin{padding:14px}}
