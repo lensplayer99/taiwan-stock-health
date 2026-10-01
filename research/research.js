@@ -409,6 +409,7 @@ function mountFixed(data){
 }
 
  for(const id of ['fixedStart','fixedEnd','fixedAnchorDate']){const e=document.getElementById(id);e.min=body.calendar[0];e.max=body.as_of;}
- document.getElementById('marginAsOf').textContent=`資料日 ${body.as_of}；上市價格 ${body.markets.TAIEX.coverage.price_observations} 日、融資 ${body.markets.TAIEX.coverage.money_observations} 日；上櫃價格 ${body.markets.TPEx.coverage.price_observations} 日、融資 ${body.markets.TPEx.coverage.money_observations} 日。上櫃歷史缺口保持斷線；缺少當日融資時餘額卡顯示待資料，不沿用前一天。`;
+ const adjustedDays=body.markets.TPEx.price_and_margin.filter(r=>r.margin_thousand!==null&&r.vintage==='OFFICIAL_ADJUSTED_PREVIOUS').length;
+ document.getElementById('marginAsOf').textContent=`資料日 ${body.as_of}；上市價格 ${body.markets.TAIEX.coverage.price_observations} 日、融資 ${body.markets.TAIEX.coverage.money_observations} 日；上櫃價格 ${body.markets.TPEx.coverage.price_observations} 日、融資 ${body.markets.TPEx.coverage.money_observations} 日。${adjustedDays?`其中上櫃 ${adjustedDays} 日採後一報表的調整前日餘額，查看日期可辨識。`:''}缺日保持斷線；缺少當日融資時餘額卡顯示待資料，不沿用前一天。`;
  mountFixed(body);
 }
