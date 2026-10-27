@@ -1,0 +1,21 @@
+{
+  "schema": "RESEARCH_SHOWCASES_DISPLAY_V1",
+  "build_id": "research-showcases-20261027-v1",
+  "as_of": "2026-10-22",
+  "data_dates": {
+    "taxonomy_v2": "2026-10-21",
+    "abf_activity": "2026-10-22"
+  },
+  "files": {
+    "taxonomy-v2/index.html": {
+      "bytes": 230815,
+      "sha256": "652c06ed50ff49ba69c4cd3c0a9c0e42a55ede88fe9540a24912e579265ea2fc",
+      "data_date": "2026-10-21"
+    },
+    "abf-activity/index.html": {
+      "bytes": 64001,
+      "sha256": "170f082cbf88d8dd3d6c5c3edb3ac603b34ac38257c6ed52d75d280d2aef5be1",
+      "data_date": "2026-10-22"
+    }
+  }
+}
