@@ -1,20 +1,26 @@
 {
-  "schema": "RESEARCH_SHOWCASES_DISPLAY_V1",
-  "build_id": "research-showcases-20261027-v1",
+  "schema": "RESEARCH_SHOWCASES_DISPLAY_V2",
+  "build_id": "research-showcases-20261027-v2",
   "as_of": "2026-10-22",
   "data_dates": {
     "taxonomy_v2": "2026-10-21",
-    "abf_activity": "2026-10-22"
+    "abf_activity": "2026-10-22",
+    "v1_probabilities": "2026-10-22"
   },
   "files": {
+    "abf-activity/index.html": {
+      "bytes": 64062,
+      "sha256": "568b2716beac44f1f683807d7815c26ef1ceb248e29058308c45f7a203fd37c5",
+      "data_date": "2026-10-22"
+    },
     "taxonomy-v2/index.html": {
-      "bytes": 230815,
-      "sha256": "652c06ed50ff49ba69c4cd3c0a9c0e42a55ede88fe9540a24912e579265ea2fc",
+      "bytes": 230876,
+      "sha256": "2f139ba11f7514bd0f6a2e6d177315bcae78fb742abb20d5d6cbbc1f2e68b790",
       "data_date": "2026-10-21"
     },
-    "abf-activity/index.html": {
-      "bytes": 64001,
-      "sha256": "170f082cbf88d8dd3d6c5c3edb3ac603b34ac38257c6ed52d75d280d2aef5be1",
+    "v1-probabilities/index.html": {
+      "bytes": 14667,
+      "sha256": "d1e2dac7799d646d98f978276b7d0449ee40c2cfab8d40d95fc7c43b662dc663",
       "data_date": "2026-10-22"
     }
   }
