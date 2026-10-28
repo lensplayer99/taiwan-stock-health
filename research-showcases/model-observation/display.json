@@ -1,0 +1,415 @@
+{
+  "build_date": "2026-10-29",
+  "firebarrel": {
+    "individual_score_date": null,
+    "rows": [
+      {
+        "crash_light": "🔴",
+        "crash_score": null,
+        "crash_stage": "HOT_CRASH_WATCH",
+        "stock_id": "1595",
+        "stock_name": "川寶"
+      },
+      {
+        "crash_light": "🔴",
+        "crash_score": null,
+        "crash_stage": "HOT_CRASH_WATCH",
+        "stock_id": "2030",
+        "stock_name": "彰源"
+      },
+      {
+        "crash_light": "🔴",
+        "crash_score": null,
+        "crash_stage": "HOT_CRASH_WATCH",
+        "stock_id": "5314",
+        "stock_name": "世紀*"
+      },
+      {
+        "crash_light": "🔴",
+        "crash_score": null,
+        "crash_stage": "HOT_CRASH_WATCH",
+        "stock_id": "6425",
+        "stock_name": "易發"
+      },
+      {
+        "crash_light": "🟠",
+        "crash_score": null,
+        "crash_stage": "EXTREME_HEAT_MULTI",
+        "stock_id": "3498",
+        "stock_name": "陽程"
+      },
+      {
+        "crash_light": "🟠",
+        "crash_score": null,
+        "crash_stage": "EXTREME_HEAT_MULTI",
+        "stock_id": "3653",
+        "stock_name": "健策"
+      },
+      {
+        "crash_light": "🟠",
+        "crash_score": null,
+        "crash_stage": "EXTREME_HEAT_MULTI",
+        "stock_id": "6148",
+        "stock_name": "驊宏資"
+      },
+      {
+        "crash_light": "🟠",
+        "crash_score": null,
+        "crash_stage": "EXTREME_HEAT_MULTI",
+        "stock_id": "6179",
+        "stock_name": "亞通"
+      },
+      {
+        "crash_light": "🟠",
+        "crash_score": null,
+        "crash_stage": "EXTREME_HEAT_MULTI",
+        "stock_id": "6218",
+        "stock_name": "豪勉"
+      },
+      {
+        "crash_light": "🟠",
+        "crash_score": null,
+        "crash_stage": "EXTREME_HEAT_MULTI",
+        "stock_id": "6683",
+        "stock_name": "雍智科技"
+      },
+      {
+        "crash_light": "🟠",
+        "crash_score": null,
+        "crash_stage": "EXTREME_HEAT_MULTI",
+        "stock_id": "7711",
+        "stock_name": "永擎"
+      }
+    ],
+    "rule": "Original saved firebarrel_ids, original order and original crash fields; no recomputation",
+    "snapshot_date": "2026-10-01",
+    "snapshot_generated_at": "2026-10-01T22:00:36+08:00",
+    "version": "v1.05B-cloud-latest-only"
+  },
+  "schema": "MODEL_FIREBARREL_DISPLAY_V1",
+  "snapshot_only": true,
+  "source_hashes": {
+    "legacy_public_snapshot": "5bdfc5cca52d12efdd72e166c4b4c94513e47b2ef3c53f7d7156852795d94186",
+    "saved_v1_result": "7911606cdeb8490a6d8a49e4c872159e109fd1b71ede4636dfe3f686c9b41536"
+  },
+  "v1": {
+    "basis": "PRICE_RETURN",
+    "calibration_status": {
+      "FINAL20260831_FULL45_H20_DIRECTION5": "CALIBRATOR_FIT_NOT_PROSPECTIVELY_VALIDATED",
+      "FINAL20260831_FULL45_PLUS7_H20_DIRECTION5": "CALIBRATOR_FIT_NOT_PROSPECTIVELY_VALIDATED"
+    },
+    "data_date": "2026-10-28",
+    "horizon_market_sessions": 20,
+    "information_cutoff": "2026-08-31T23:59:59.999999+08:00",
+    "issued_at": "2026-10-28T16:22:17.969937+00:00",
+    "mode": "POST_CUTOFF_REPLAY",
+    "model_version": "research_reference_v1_final45_20261005_v1",
+    "models": [
+      "FINAL20260831_FULL45_H20_DIRECTION5",
+      "FINAL20260831_FULL45_PLUS7_H20_DIRECTION5"
+    ],
+    "records": [
+      {
+        "market": "TWSE",
+        "name": "台泥",
+        "predictions": [
+          {
+            "direction3": {
+              "p_down": 0.4776452589776863,
+              "p_flat": 0.02629942157219537,
+              "p_up": 0.4960553194501184
+            },
+            "direction5": [
+              0.24829431822162373,
+              0.22935094075606255,
+              0.02629942157219537,
+              0.22173681693508968,
+              0.2743185025150287
+            ],
+            "imputed_fields": [
+              "age_listing",
+              "idx_price_r20",
+              "idx_price_r60",
+              "idx_price_sigma20",
+              "idx_price_d60",
+              "T_flow20",
+              "T_buyfrac20",
+              "T_accel"
+            ],
+            "model_id": "FINAL20260831_FULL45_H20_DIRECTION5",
+            "model_sha256": "dd40629730fafa4dc033fb94dceb88e1bb4d9b8e022a3c98a09f8964d367c03f"
+          },
+          {
+            "direction3": {
+              "p_down": 0.47762562907613315,
+              "p_flat": 0.026238042081766697,
+              "p_up": 0.4961363288421002
+            },
+            "direction5": [
+              0.2501161693119996,
+              0.22750945976413356,
+              0.026238042081766697,
+              0.2218815854035992,
+              0.274254743438501
+            ],
+            "imputed_fields": [
+              "age_listing",
+              "idx_price_r20",
+              "idx_price_r60",
+              "idx_price_sigma20",
+              "idx_price_d60",
+              "T_flow20",
+              "T_buyfrac20",
+              "T_accel"
+            ],
+            "model_id": "FINAL20260831_FULL45_PLUS7_H20_DIRECTION5",
+            "model_sha256": "e8976a030dcdd24c103abdc3682e2fdb8339d99f3f85652af0730d37a53b568c"
+          }
+        ],
+        "signal_date": "2026-10-28",
+        "stock_id": "1101"
+      },
+      {
+        "market": "TWSE",
+        "name": "亞泥",
+        "predictions": [
+          {
+            "direction3": {
+              "p_down": 0.4489931360526449,
+              "p_flat": 0.03064235013936521,
+              "p_up": 0.52036451380799
+            },
+            "direction5": [
+              0.19789915632679073,
+              0.2510939797258542,
+              0.03064235013936521,
+              0.2519921840552699,
+              0.26837232975272
+            ],
+            "imputed_fields": [
+              "age_listing",
+              "idx_price_r20",
+              "idx_price_r60",
+              "idx_price_sigma20",
+              "idx_price_d60"
+            ],
+            "model_id": "FINAL20260831_FULL45_H20_DIRECTION5",
+            "model_sha256": "dd40629730fafa4dc033fb94dceb88e1bb4d9b8e022a3c98a09f8964d367c03f"
+          },
+          {
+            "direction3": {
+              "p_down": 0.4492621396851827,
+              "p_flat": 0.031192870037841724,
+              "p_up": 0.5195449902769755
+            },
+            "direction5": [
+              0.1901271505245518,
+              0.2591349891606309,
+              0.031192870037841724,
+              0.2629552937283711,
+              0.2565896965486044
+            ],
+            "imputed_fields": [
+              "age_listing",
+              "idx_price_r20",
+              "idx_price_r60",
+              "idx_price_sigma20",
+              "idx_price_d60"
+            ],
+            "model_id": "FINAL20260831_FULL45_PLUS7_H20_DIRECTION5",
+            "model_sha256": "e8976a030dcdd24c103abdc3682e2fdb8339d99f3f85652af0730d37a53b568c"
+          }
+        ],
+        "signal_date": "2026-10-28",
+        "stock_id": "1102"
+      },
+      {
+        "market": "TPEx",
+        "name": "漢來美食",
+        "predictions": [
+          {
+            "direction3": {
+              "p_down": 0.48758137118752765,
+              "p_flat": 0.03791194959412165,
+              "p_up": 0.47450667921835077
+            },
+            "direction5": [
+              0.19962861248971417,
+              0.28795275869781345,
+              0.03791194959412165,
+              0.26434120808020894,
+              0.21016547113814185
+            ],
+            "imputed_fields": [
+              "age_listing",
+              "idx_price_r20",
+              "idx_price_r60",
+              "idx_price_sigma20",
+              "idx_price_d60",
+              "T_flow1",
+              "T_flow5",
+              "T_flow20",
+              "T_buyfrac20",
+              "T_streak",
+              "T_accel"
+            ],
+            "model_id": "FINAL20260831_FULL45_H20_DIRECTION5",
+            "model_sha256": "dd40629730fafa4dc033fb94dceb88e1bb4d9b8e022a3c98a09f8964d367c03f"
+          },
+          {
+            "direction3": {
+              "p_down": 0.4863803587836243,
+              "p_flat": 0.03815056883375965,
+              "p_up": 0.475469072382616
+            },
+            "direction5": [
+              0.1950770837742474,
+              0.29130327500937686,
+              0.03815056883375965,
+              0.26894187784169216,
+              0.20652719454092383
+            ],
+            "imputed_fields": [
+              "age_listing",
+              "idx_price_r20",
+              "idx_price_r60",
+              "idx_price_sigma20",
+              "idx_price_d60",
+              "T_flow1",
+              "T_flow5",
+              "T_flow20",
+              "T_buyfrac20",
+              "T_streak",
+              "T_accel"
+            ],
+            "model_id": "FINAL20260831_FULL45_PLUS7_H20_DIRECTION5",
+            "model_sha256": "e8976a030dcdd24c103abdc3682e2fdb8339d99f3f85652af0730d37a53b568c"
+          }
+        ],
+        "signal_date": "2026-10-28",
+        "stock_id": "1268"
+      },
+      {
+        "market": "TPEx",
+        "name": "濱川",
+        "predictions": [
+          {
+            "direction3": {
+              "p_down": 0.5637445693991123,
+              "p_flat": 0.012576031259721294,
+              "p_up": 0.4236793993411665
+            },
+            "direction5": [
+              0.44849095334941913,
+              0.11525361604969314,
+              0.012576031259721294,
+              0.09643330997194682,
+              0.3272460893692197
+            ],
+            "imputed_fields": [
+              "age_listing",
+              "idx_price_r20",
+              "idx_price_r60",
+              "idx_price_sigma20",
+              "idx_price_d60",
+              "T_flow1",
+              "T_flow5",
+              "T_flow20",
+              "T_buyfrac20",
+              "T_streak",
+              "T_accel"
+            ],
+            "model_id": "FINAL20260831_FULL45_H20_DIRECTION5",
+            "model_sha256": "dd40629730fafa4dc033fb94dceb88e1bb4d9b8e022a3c98a09f8964d367c03f"
+          },
+          {
+            "direction3": {
+              "p_down": 0.5639614678721376,
+              "p_flat": 0.01223267305576662,
+              "p_up": 0.42380585907209567
+            },
+            "direction5": [
+              0.4516944339100789,
+              0.11226703396205875,
+              0.01223267305576662,
+              0.0955612715827952,
+              0.32824458748930047
+            ],
+            "imputed_fields": [
+              "age_listing",
+              "idx_price_r20",
+              "idx_price_r60",
+              "idx_price_sigma20",
+              "idx_price_d60",
+              "T_flow1",
+              "T_flow5",
+              "T_flow20",
+              "T_buyfrac20",
+              "T_streak",
+              "T_accel"
+            ],
+            "model_id": "FINAL20260831_FULL45_PLUS7_H20_DIRECTION5",
+            "model_sha256": "e8976a030dcdd24c103abdc3682e2fdb8339d99f3f85652af0730d37a53b568c"
+          }
+        ],
+        "signal_date": "2026-10-28",
+        "stock_id": "1569"
+      },
+      {
+        "market": "TPEx",
+        "name": "環球晶",
+        "predictions": [
+          {
+            "direction3": {
+              "p_down": 0.5068064078452789,
+              "p_flat": 0.012106269144150708,
+              "p_up": 0.48108732301057056
+            },
+            "direction5": [
+              0.3825324472401031,
+              0.12427396060517576,
+              0.012106269144150708,
+              0.10785600725393917,
+              0.3732313157566314
+            ],
+            "imputed_fields": [
+              "age_listing",
+              "idx_price_r20",
+              "idx_price_r60",
+              "idx_price_sigma20",
+              "idx_price_d60"
+            ],
+            "model_id": "FINAL20260831_FULL45_H20_DIRECTION5",
+            "model_sha256": "dd40629730fafa4dc033fb94dceb88e1bb4d9b8e022a3c98a09f8964d367c03f"
+          },
+          {
+            "direction3": {
+              "p_down": 0.5101464293321278,
+              "p_flat": 0.012481165007063725,
+              "p_up": 0.4773724056608085
+            },
+            "direction5": [
+              0.379571195651323,
+              0.1305752336808048,
+              0.012481165007063725,
+              0.11144223724100918,
+              0.36593016841979936
+            ],
+            "imputed_fields": [
+              "age_listing",
+              "idx_price_r20",
+              "idx_price_r60",
+              "idx_price_sigma20",
+              "idx_price_d60"
+            ],
+            "model_id": "FINAL20260831_FULL45_PLUS7_H20_DIRECTION5",
+            "model_sha256": "e8976a030dcdd24c103abdc3682e2fdb8339d99f3f85652af0730d37a53b568c"
+          }
+        ],
+        "signal_date": "2026-10-28",
+        "stock_id": "6488"
+      }
+    ],
+    "target_end": null
+  }
+}

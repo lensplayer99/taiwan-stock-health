@@ -1,0 +1,20 @@
+{
+  "ETF_data_included": false,
+  "FinMind_API_calls": 0,
+  "files": {
+    "display.json": {
+      "bytes": 12745,
+      "sha256": "4e58b26b782b5e5d5a580d1fc3bd3e1ed56586e542ed543eb756d0605b2a3d02"
+    },
+    "index.html": {
+      "bytes": 18680,
+      "sha256": "13ac8b35fb8f2b5374d40ba736f54f93f3eaa00e6d1ff508322ebc8bd92c4104"
+    }
+  },
+  "firebarrel_snapshot_date": "2026-10-01",
+  "new_inference_calls": 0,
+  "original_model_predictions_modified": false,
+  "schema": "MODEL_FIREBARREL_DISPLAY_MANIFEST_V1",
+  "snapshot_only": true,
+  "v1_data_date": "2026-10-28"
+}
