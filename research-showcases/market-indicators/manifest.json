@@ -3,9 +3,10 @@
   "as_of": "2026-10-28",
   "files": {
     "data.json": {
-      "bytes": 88992,
-      "sha256": "3463946600feef7897ef96e9aaa1eb5edafe0ad4dc791eaab5fca134e460c318"
+      "bytes": 34028,
+      "sha256": "ecbc4f1f7d617d9e5706edb8dc1c60ce8c9ac7276209c329ecd6eb56910c117a"
     }
   },
-  "ETF_holdings_included": false
+  "ETF_holdings_included": false,
+  "publication_policy": "NO_INSTITUTION_OR_FUTURES_VALUES_20261029_V1"
 }
