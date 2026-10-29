@@ -32,7 +32,7 @@ const validId=id=>typeof id==='string'&&/^[A-Za-z0-9]+$/.test(id);
 export const validDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value+'T00:00:00Z'))&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
 export function parseRoute(hash=''){
   if(!hash||hash==='#')return {page:'market',id:null,hash:'#market',valid:true};
-  if(['#home','#market','#stocks'].includes(hash))return {page:hash.slice(1),id:null,hash,valid:true};
+  if(['#home','#market','#stocks','#predictions','#composite','#sectors'].includes(hash))return {page:hash.slice(1),id:null,hash,valid:true};
   const match=/^#stock\/([A-Za-z0-9]+)$/.exec(hash);
   return match?{page:'stock',id:match[1],hash,valid:true}:{page:'home',id:null,hash:'#home',valid:false};
 }
@@ -47,7 +47,7 @@ export function resourceUrl(resource,base){
   if(url.origin!==directory.origin||!url.pathname.startsWith(directory.pathname)||url.search||url.hash||url.username||url.password)throw dataError();
   return url.href;
 }
-export function searchStocks(stocks,query,limit=12){const value=String(query||'').trim().toLocaleLowerCase('zh-TW');return value?stocks.filter(stock=>`${stock.stock_id} ${stock.name}`.toLocaleLowerCase('zh-TW').includes(value)).slice(0,limit):[];}
+export function searchStocks(stocks,query,limit=12){const value=String(query||'').trim().toLocaleLowerCase('zh-TW');return value?stocks.filter(stock=>`${stock.stock_id} ${stock.name}`.toLocaleLowerCase('zh-TW').includes(value)).sort((a,b)=>Number(b.stock_id.toLowerCase()===value)-Number(a.stock_id.toLowerCase()===value)||stockCodeOrder(a,b)).slice(0,limit):[];}
 export function validateSignalRow(row,date){
   if(!row||!validId(row.stock_id)||typeof row.name!=='string'||row.date!==date||typeof row.eligible!=='boolean'||row.total_light_count!==40||!row.light_states||Object.keys(row.light_states).length!==40||LAMPS.some(l=>!Object.hasOwn(STATES,row.light_states[l.id]))||Object.keys(COUNTS).some(key=>!Number.isInteger(row[key])||row[key]<0||row[key]>40))throw dataError();
   const states=Object.values(row.light_states);
@@ -278,6 +278,127 @@ async function mountMarketIndicators(){
   }catch{host.innerHTML='<h3>大盤指標與變化</h3>'+empty('指標摘要尚未通過版本或來源核對；其他已發布區塊仍可查看。');}
 }
 
+// Display-only rankings: saved predictions stay unchanged. No fit, inference or source API.
+export const RANK_MODEL_IDS=['FINAL20260831_FULL45_H20_DIRECTION5','FINAL20260831_FULL45_PLUS7_H20_DIRECTION5'];
+export const rankModelName=id=>id.includes('PLUS7')?'FULL45＋價量七燈':'FULL45';
+const finite=x=>typeof x==='number'&&Number.isFinite(x);
+const stockCodeOrder=(a,b)=>a.stock_id<b.stock_id?-1:a.stock_id>b.stock_id?1:0;
+export function percentileRanks(rows,compare){
+  const sorted=[...rows].sort(compare),out=new Map(),n=sorted.length;
+  for(let a=0;a<n;){let b=a+1;while(b<n&&compare(sorted[a],sorted[b])===0)b++;
+    const score=n===1?50:100*(a+(b-1))/2/(n-1);
+    for(let i=a;i<b;i++)out.set(sorted[i].stock_id,score);a=b;
+  }return out;
+}
+export function validateV1Display(data){
+  const v=data?.v1;
+  if(!v||!validDate(v.data_date)||v.horizon_market_sessions!==20||v.mode!=='POST_CUTOFF_REPLAY'||v.basis!=='PRICE_RETURN'||!Array.isArray(v.records)||!Array.isArray(v.not_scored)||!Array.isArray(v.models)||v.models.length!==2||RANK_MODEL_IDS.some(x=>!v.models.includes(x)))throw Error('模型日期、期間或版本未通過核對。');
+  const ids=new Set(),hashes=new Map();
+  for(const r of v.records){
+    if(!validId(r.stock_id)||ids.has(r.stock_id)||r.signal_date!==v.data_date||!Array.isArray(r.predictions)||r.predictions.length!==2)throw Error('模型逐股資料不一致。');ids.add(r.stock_id);
+    const models=new Set();for(const p of r.predictions){const d=p.direction3;
+      if(!RANK_MODEL_IDS.includes(p.model_id)||models.has(p.model_id)||!hashValue(p.model_sha256)||!d||['p_up','p_down','p_flat'].some(k=>!finite(d[k])||d[k]<0||d[k]>1)||Math.abs(d.p_up+d.p_down+d.p_flat-1)>1e-6)throw Error('機率欄位不完整。');
+      if(hashes.has(p.model_id)&&hashes.get(p.model_id)!==p.model_sha256)throw Error('同名模型版本不同。');hashes.set(p.model_id,p.model_sha256);models.add(p.model_id);
+    }
+  }
+  return data;
+}
+export function buildDisplayRanks(data,summary,{model=RANK_MODEL_IDS[0],direction='up',horizon=20}={}){
+  validateV1Display(data);
+  if(!RANK_MODEL_IDS.includes(model)||!['up','down'].includes(direction)||horizon!==data.v1.horizon_market_sessions)throw Error('此模型／期間／方向尚未提供。');
+  const date=data.v1.data_date,key=direction==='up'?'p_up':'p_down',lightKey=direction==='up'?'positive_lights':'negative_lights';
+  // Existing published signal validator owns the 40-light semantics (GRAY is available).
+  const signal=summary?validateSignalSummary(summary):null;
+  const predictions=data.v1.records.map(r=>({...r,p:r.predictions.find(p=>p.model_id===model),probability:r.predictions.find(p=>p.model_id===model).direction3[key]})).sort((a,b)=>b.probability-a.probability||stockCodeOrder(a,b));
+  predictions.forEach((r,i)=>r.prediction_rank=i+1);
+  const excluded=[],cohort=[];
+  for(const r of predictions){const s=signal?.byStock.get(r.stock_id);let reason=null;
+    if(!signal)reason='燈號資料尚未就緒';else if(signal.date!==date)reason=`日期不同：燈號 ${signal.date}／機率 ${date}`;
+    else if(!s)reason='缺少同日燈號';else if(!s.eligible)reason='未具備同日燈號資格';else if(s.available_light_count===0)reason='沒有有效燈號';
+    if(reason){excluded.push({stock_id:r.stock_id,name:r.name,reason});continue;}
+    cohort.push({...r,light_count:s[lightKey],available:s.available_light_count,missing:s.missing_lights,light_ratio:s[lightKey]/s.available_light_count});
+  }
+  const pp=percentileRanks(cohort,(a,b)=>a.probability-b.probability);
+  // Cross multiplication keeps equal proportions (1/2 and 2/4) tied exactly.
+  const lp=percentileRanks(cohort,(a,b)=>a.light_count*b.available-b.light_count*a.available);
+  const composite=cohort.map(r=>({...r,probability_percentile:pp.get(r.stock_id),light_percentile:lp.get(r.stock_id),score:(pp.get(r.stock_id)+lp.get(r.stock_id))/2})).sort((a,b)=>b.score-a.score||b.probability-a.probability||stockCodeOrder(a,b));
+  composite.forEach((r,i)=>r.composite_rank=i+1);
+  return {date,model,direction,horizon,predictions,composite,excluded,not_scored:data.v1.not_scored,signal_date:signal?.date??null};
+}
+let rankSelection={model:RANK_MODEL_IDS[0],direction:'up'};
+const rankingContextCache=createResourceCache();
+export async function readSavedModels(base=location.href,fetcher=fetch){
+  return rankingContextCache.get(new URL('../research-showcases/model-observation/',base).href,async()=>{
+    const folder=new URL('../research-showcases/model-observation/',base);
+    const response=await fetcher(new URL('manifest.json',folder),{cache:'no-store'});if(!response.ok)throw Error('模型展示收據尚未取得。');const manifest=await response.json();
+    const r=await fetcher(new URL('display.json',folder),{cache:'no-cache'});if(!r.ok)throw Error('已保存機率暫時無法讀取。');const bytes=await r.arrayBuffer();await verifyResourceBytes(bytes,manifest.files?.['display.json']);
+    const data=validateV1Display(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)));
+    if(manifest.v1_data_date!==data.v1.data_date)throw Error('模型展示日期不一致。');return data;
+  });
+}
+export function rankCard(r,kind,direction){
+  const d=r.p.direction3,rank=kind==='composite'?r.composite_rank:r.prediction_rank;
+  return `<article class="rank-card"><header><span class="rank-number">${rank}</span><a href="#stock/${esc(r.stock_id)}" data-rank-model="${esc(r.p.model_id)}" data-rank-direction="${direction}"><strong>${esc(r.stock_id)} ${esc(r.name)}</strong><small>${esc(r.market)}</small></a>${kind==='composite'?`<div class="rank-score"><strong>${r.score.toFixed(2)}</strong><small>綜合分數／100</small></div>`:''}</header><div class="rank-probs"><span class="red">上漲機率 <b>${probabilityText(d.p_up)}</b></span><span class="green">下跌機率 <b>${probabilityText(d.p_down)}</b></span><span>平盤機率 <b>${probabilityText(d.p_flat)}</b></span></div>${kind==='composite'?`<div class="rank-light">${direction==='up'?'正向紅燈':'負向綠燈'} <b>${r.light_count} / ${r.available}</b> 有效燈（${(r.light_ratio*100).toFixed(1)}%）<span>另 ${r.missing} 顆資料不足</span></div><details><summary>兩項百分位與計算</summary><p>${direction==='up'?'上漲':'下跌'}機率百分位 <b>${r.probability_percentile.toFixed(2)}</b>；燈號比例百分位 <b>${r.light_percentile.toFixed(2)}</b></p><p>（${r.probability_percentile.toFixed(2)} ＋ ${r.light_percentile.toFixed(2)}）÷ 2 ＝ ${r.score.toFixed(2)}。只在同一合格股票池比較。</p></details>`:`<p class="footnote">機率高低排序，不是預估漲幅；${rankModelName(r.p.model_id)}。</p>`}</article>`;
+}
+export const rankingExplanation=`綜合分數＝機率百分位 × 50% ＋ 燈號比例百分位 × 50%。上漲榜用正向紅燈，下跌榜用負向綠燈；分母是所有有效燈（含灰燈，不含缺資料）。同日、同 H20、同模型、同合格股票池才比較。百分位由低至高：100 ×（平均名次 − 1）／（N − 1），相同值平均名次；只有一檔時兩項均為 50。綜合分數同分，依原方向機率、再代碼排序。這是介面試用排序，不是新機率，也不是已驗證的新模型。`;
+export function rankControls(id){return `<div class="rank-controls"><label>模型<select id="${id}Model">${RANK_MODEL_IDS.map(x=>`<option value="${x}">${rankModelName(x)}</option>`).join('')}</select></label><label>預測期間<select id="${id}Horizon"><option value="20">20 個市場交易日（H20）</option></select></label><label>排序方向<select id="${id}Direction"><option value="up">上漲機率由高到低</option><option value="down">下跌機率由高到低</option></select></label><label>找股票<input id="${id}Query" type="search" placeholder="股號或部分名稱"></label></div>`;}
+export function setupRankingViews(getSummary){
+  document.addEventListener('click',event=>{const a=event.target.closest('[data-rank-model]');if(a&&RANK_MODEL_IDS.includes(a.dataset.rankModel)&&['up','down'].includes(a.dataset.rankDirection))rankSelection={model:a.dataset.rankModel,direction:a.dataset.rankDirection};});
+  const groups=new Map();let promise;
+  const get=()=>promise??=readSavedModels();
+  async function paint(kind,reset=true){const el=document.getElementById(kind+'View');if(!el)return;const prefix=kind==='predictions'?'prediction':'composite';
+    if(reset)el.dataset.limit='30';const limit=Number(el.dataset.limit||30);
+    try{const data=await get(),model=document.getElementById(prefix+'Model').value,direction=document.getElementById(prefix+'Direction').value,summary=getSummary();
+      const key=[model,direction,summary?.build_id,summary?.as_of].join(':');if(!groups.has(key))groups.set(key,buildDisplayRanks(data,summary,{model,direction}));const ranks=groups.get(key),rows=kind==='predictions'?ranks.predictions:ranks.composite,q=document.getElementById(prefix+'Query').value.trim().toLowerCase();
+      const shown=rows.filter(r=>(r.stock_id+' '+r.name).toLowerCase().includes(q));
+      document.getElementById(prefix+'Status').textContent=`資料日 ${ranks.date} · ${rankModelName(model)} · H20 · 合格 ${rows.length} 檔；符合搜尋 ${shown.length} 檔。搜尋不改變原排名。${kind==='composite'?`另 ${ranks.excluded.length} 檔缺少合格同日燈號，未納排名。`:''}`;
+      document.getElementById(prefix+'Rows').innerHTML=shown.length?shown.slice(0,limit).map(r=>rankCard(r,kind==='predictions'?'predictions':'composite',direction)).join(''):empty('沒有符合條件的股票。可清除搜尋或切換模型。');
+      const button=document.getElementById(prefix+'More');button.hidden=shown.length<=limit;button.onclick=()=>{el.dataset.limit=String(limit+30);paint(kind,false);};
+      document.getElementById(prefix+'Missing').innerHTML=[...(kind==='composite'?ranks.excluded:[]),...ranks.not_scored.map(r=>({...r,reason:'模型未計分：'+r.reason}))].filter(r=>(r.stock_id+' '+r.name).toLowerCase().includes(q)).map(r=>`<li><a href="#stock/${esc(r.stock_id)}">${esc(r.stock_id)} ${esc(r.name)}</a>：${esc(r.reason)}</li>`).join('');
+      document.getElementById(prefix+'Version').textContent=`${data.v1.model_version} · ${model} · ${data.v1.mode} · 保存 ${data.v1.issued_at}。資訊截止 ${data.v1.information_cutoff}。校準器已擬合，尚未通過前瞻驗證。`;
+      document.getElementById(prefix+'Overlap').hidden=!model.includes('PLUS7');
+    }catch(e){document.getElementById(prefix+'Status').textContent=e.message;document.getElementById(prefix+'Rows').innerHTML=empty('保留燈號及其他可用資料；不以舊日或零機率補入。');}
+  }
+  for(const kind of ['predictions','composite']){const prefix=kind==='predictions'?'prediction':'composite';for(const s of ['Model','Direction','Horizon'])document.getElementById(prefix+s).onchange=()=>paint(kind);document.getElementById(prefix+'Query').oninput=()=>paint(kind);}
+  return {paint,get,groups};
+}
+export async function mountStockRanks(body,summary,alive=()=>true){
+  const host=document.getElementById('stockModelRanks');if(!host)return;
+  try{const data=await readSavedModels();if(!alive())return;
+    host.innerHTML=`<h3>漲跌預測與綜合排名</h3><p>機率資料日 ${esc(data.v1.data_date)}；燈號資料日 ${esc(summary?.as_of||'未提供')}。H20／價格報酬／POST_CUTOFF_REPLAY。</p><div class="rank-controls"><label>模型<select id="stockRankModel">${RANK_MODEL_IDS.map(x=>`<option value="${x}"${x===rankSelection.model?' selected':''}>${rankModelName(x)}</option>`).join('')}</select></label><label>方向<select id="stockRankDirection"><option value="up"${rankSelection.direction==='up'?' selected':''}>上漲</option><option value="down"${rankSelection.direction==='down'?' selected':''}>下跌</option></select></label></div><div id="stockRankResult"></div><p class="footnote">${rankingExplanation}</p><p class="notice" id="stockRankOverlap" hidden>PLUS7 本身已使用價量七燈；再加入燈號可能重複加權。</p>`;
+    const paint=()=>{const model=document.getElementById('stockRankModel').value,direction=document.getElementById('stockRankDirection').value,ranks=buildDisplayRanks(data,summary,{model,direction}),r=ranks.predictions.find(r=>r.stock_id===body.stock_id),c=ranks.composite.find(r=>r.stock_id===body.stock_id);
+      document.getElementById('stockRankResult').innerHTML=r?`<p>機率排名 ${r.prediction_rank} / ${ranks.predictions.length}${c?`；綜合排名 ${c.composite_rank} / ${ranks.composite.length}`:''}</p>`+rankCard(c||r,c?'composite':'predictions',direction)+(c?'':empty(ranks.excluded.find(r=>r.stock_id===body.stock_id)?.reason||'綜合排名資料不足')):empty('此股尚無合格模型結果：'+(data.v1.not_scored.find(r=>r.stock_id===body.stock_id)?.reason||'未在本次普通股模型池；燈號仍可查看。'));
+      rankSelection={model,direction};document.getElementById('stockRankOverlap').hidden=!model.includes('PLUS7');};document.getElementById('stockRankModel').onchange=paint;document.getElementById('stockRankDirection').onchange=paint;paint();
+  }catch(e){if(alive())host.innerHTML=`<h3>漲跌預測與綜合排名</h3>${empty(e.message+' 燈號資料仍可查看。')}`;}
+}
+// Chart slots never fabricate missing daily flows from rolling 5/10/20-day aggregates.
+export function stockChartSeries(body,calendar){
+  // 2026-10-23 closure is already verified in the installed market dashboard calendar evidence.
+  // The older margin calendar still carries that null-price date; do not call it a trading day.
+  const dates=[...new Set(calendar.filter(validDate))].filter(d=>d<=body.as_of&&d!=='2026-10-23').sort().slice(-20),path=new Map();
+  for(const r of body.observation.path){if(path.has(r.date))throw Error('保存研究價格日期重複。');path.set(r.date,r);}
+  return dates.map(date=>({date,price:finite(path.get(date)?.close)?path.get(date).close:null,trust:null,foreign:null,concentration:null}));
+}
+export function stockChartSvg(rows,field){
+  const values=rows.map(r=>r[field]).filter(finite),prices=rows.map(r=>r.price).filter(finite),W=680,H=240,left=60,right=615,top=30,bottom=190,n=rows.length;
+  const scale=Math.max(1,...values.map(Math.abs)),minP=prices.length?Math.min(...prices):0,maxP=prices.length?Math.max(...prices):1,range=maxP-minP||1;
+  const x=i=>left+(i+.5)*(right-left)/Math.max(n,1),zero=(top+bottom)/2,py=p=>bottom-(p-minP)/range*(bottom-top);
+  let marks='',path='',connected=false;
+  rows.forEach((r,i)=>{if(finite(r[field])){const y=zero-r[field]/scale*(bottom-top)/2;marks+=`<rect x="${x(i)-7}" y="${Math.min(y,zero)}" width="14" height="${Math.max(1,Math.abs(zero-y))}" fill="${r[field]>=0?'#ff9c9b':'#70d8b1'}"/>`;}
+    if(finite(r.price)){path+=(connected?' L':' M')+x(i)+' '+py(r.price);connected=true;marks+=`<circle cx="${x(i)}" cy="${py(r.price)}" r="3" fill="#e8c884"/>`;}else connected=false;
+    marks+=`<rect class="stock-chart-hit" data-chart-i="${i}" tabindex="0" role="button" aria-label="${r.date} ${finite(r.price)?'保存研究價格 '+r.price:'價格不足'}；柱值${finite(r[field])?r[field]:'資料不足'}" x="${x(i)-(right-left)/Math.max(n,1)/2}" y="${top}" width="${(right-left)/Math.max(n,1)}" height="${bottom-top}" fill="transparent"><title>${r.date}：保存研究價格 ${num(r.price)}；柱值 ${num(r[field])}</title></rect>`;
+  });
+  return `<svg class="stock-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="20交易日柱狀圖與保存研究價格；缺資料留空"><line x1="${left}" x2="${right}" y1="${zero}" y2="${zero}" stroke="#48596e"/><text x="10" y="${zero+4}" fill="#b4c2d4">${values.length?'0':'待資料'}</text><path d="${path}" fill="none" stroke="#e8c884" stroke-width="2"/>${marks}<text x="${right+5}" y="${top+4}" fill="#e8c884">${prices.length?num(maxP):'—'}</text><text x="${right+5}" y="${bottom}" fill="#e8c884">${prices.length?num(minP):'—'}</text><text x="${left}" y="225" fill="#aebdd0">${rows[0]?.date||''}</text><text x="${right}" y="225" text-anchor="end" fill="#aebdd0">${rows.at(-1)?.date||''}</text></svg>`;
+}
+export function renderStockCharts(body,calendar){
+  const rows=stockChartSeries(body,calendar);
+  return `<section class="card detail-section"><h3>20 交易日籌碼與價格</h3><p class="footnote">時間由左至右，舊 → 新。金線為站內已保存研究價格（調整價口徑，非即時或未調整收盤價），右軸：元；缺日斷線。柱狀圖預留左軸，缺資料不畫零柱。可點選日期查看。</p>${[['trust','投信買賣超','張','trust'],['foreign','外資買賣超','張','foreign'],['concentration','分點買超集中度','HHI','broker_buy']].map(([field,title,unit,kind])=>{
+    const metrics=[5,10,20].map(n=>{const l=body.signals.lights.find(l=>l.id===kind+'_'+n),metric=l?.metrics.find(m=>m.label===(field==='concentration'?'同方向HHI集中度':'淨買超／賣超'));return `<span>${n} 日${field==='concentration'?'窗口 HHI':'累計淨額'}：<b>${num(metric?.value)}</b> ${unit}</span>`;}).join('');
+    return `<article class="stock-chart-panel" data-chart-field="${field}"><h4>${title}</h4><p>每日柱值尚未接入公開歷史；此版先顯示可用價格與已發布的窗口摘要，不把累計值冒充每日買賣超。</p>${stockChartSvg(rows,field)}<p class="chart-readout" role="status">點選圖上的日期；每日柱值目前資料不足。</p><div class="chart-summary">${metrics}</div>${field==='concentration'?'<p class="footnote">HHI 沿用原分點買超同方向集中度；5／10／20 日為各窗口的聚合結果，並非該日單日 HHI。原始分點明細不公開。</p>':''}</article>`;
+  }).join('')}</section>`;
+}
+export function mountChartInteractions(body,calendar){const rows=stockChartSeries(body,calendar);for(const p of document.querySelectorAll('.stock-chart-panel')){const display=e=>{const hit=e.target.closest('[data-chart-i]');if(!hit)return;const r=rows[Number(hit.dataset.chartI)];p.querySelector('.chart-readout').textContent=`${r.date}｜保存研究價格：${num(r.price)} 元；每日柱值：資料不足。`;};p.addEventListener('click',display);p.addEventListener('focusin',display);}}
+
 function init(){
   const byId=id=>document.getElementById(id);
   let manifest=null,read=null,stocks=[],summary=null,ranking=null,market=null,margin=null,signal=null,netRanking=null,route=parseRoute(location.hash),routeReady=false,selectionGeneration=0,buildReady=false,buildFailed=false;
@@ -292,6 +413,8 @@ function init(){
     byId('rankingRows').innerHTML=renderRows(page.rows,true);byId('rankingProgress').textContent=page.progressLabel;byId('rankingMore').hidden=!page.hasMore;byId('rankingMore').textContent=page.moreLabel;
   };
   const detailCache=createResourceCache(),scrollPositions=new Map();
+  byId('predictionControls').innerHTML=rankControls('prediction');byId('compositeControls').innerHTML=rankControls('composite');byId('compositeExplanation').textContent=rankingExplanation;
+  const rankViews=setupRankingViews(()=>summary);
   const hideSuggestions=()=>{byId('stockSuggestions').hidden=true;byId('stockQuery').setAttribute('aria-expanded','false');};
   const suggestions=()=>{const matches=searchStocks(stocks,byId('stockQuery').value);byId('stockSuggestions').innerHTML=matches.map(stock=>`<a class="stock-pick" href="#stock/${esc(stock.stock_id)}">${esc(stock.stock_id)} ${esc(stock.name)}</a>`).join('');byId('stockSuggestions').hidden=!matches.length;byId('stockQuery').setAttribute('aria-expanded',String(!!matches.length));};
   async function showStock(id){
@@ -304,7 +427,7 @@ function init(){
     try{
       const body=await detailCache.get(`${manifest.build_id}:${id}`,async()=>validateDetail(await read(`data/stocks/${id}.json`,SCHEMAS.detail),stock,signal?.byStock.get(id)));
       if(generation!==selectionGeneration||route.page!=='stock'||route.id!==id)return;
-      byId('stockDetail').innerHTML=renderStock(body);byId('detailStatus').textContent=body.signals.status==='AVAILABLE'?`已讀取資料日 ${body.signals.date} 的 40 顆燈號。`:'此股票目前未提供短期訊號，以下顯示已保存研究摘要。';
+      byId('stockDetail').innerHTML='<section id="stockModelRanks" class="card stock-model-panel"><h3>漲跌預測與綜合排名</h3><p>正在讀取保存結果…</p></section>'+renderStockCharts(body,margin?.calendar||[])+renderStock(body);mountChartInteractions(body,margin?.calendar||[]);mountStockRanks(body,summary,()=>generation===selectionGeneration&&route.page==='stock'&&route.id===id);byId('detailStatus').textContent=body.signals.status==='AVAILABLE'?`已讀取資料日 ${body.signals.date} 的 40 顆燈號。`:'此股票目前未提供短期訊號，以下顯示已保存研究摘要。';
     }catch(error){if(generation!==selectionGeneration||route.page!=='stock'||route.id!==id)return;byId('detailStatus').textContent=error.message;byId('stockDetail').innerHTML=empty('個股明細暫時無法顯示。可返回列表查看其他股票；此處不會以其他日期資料代替。');}
   }
   function applyRoute({reloadDetail=false}={}){
@@ -313,10 +436,10 @@ function init(){
     route=next;routeReady=true;
     if(changed&&['home','stocks'].includes(route.page)){rankingVisible={TWSE:RANKING_PAGE_SIZE,TPEX:RANKING_PAGE_SIZE};paintRanking();}
     if(location.hash!==route.hash)history.replaceState(null,'',`${location.pathname}${location.search}${route.hash}`);
-    const detail=route.page==='stock',isMarket=route.page==='market',tab=detail?'stocks':route.page;
-    document.body.dataset.route=route.page;byId('stockListView').hidden=detail||isMarket;byId('marketView').hidden=!isMarket;byId('stockDetailView').hidden=!detail;byId('homeMarketSection').hidden=route.page!=='home';
+    const detail=route.page==='stock',isMarket=route.page==='market',isSectors=route.page==='sectors',rankPage=['predictions','composite'].includes(route.page),tab=detail?'stocks':route.page;
+    document.body.dataset.route=route.page;byId('stockListView').hidden=detail||isMarket||rankPage||isSectors;byId('sharedStockSearch').hidden=isMarket||rankPage||isSectors;byId('sectorsView').hidden=!isSectors;byId('predictionsView').hidden=route.page!=='predictions';byId('compositeView').hidden=route.page!=='composite';if(rankPage)rankViews.paint(route.page);byId('marketView').hidden=!isMarket;byId('stockDetailView').hidden=!detail;byId('homeMarketSection').hidden=route.page!=='home';
     for(const link of document.querySelectorAll('[data-route-tab]')){const active=link.dataset.routeTab===tab;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}
-    const title={home:'首頁',market:'大盤觀察',stocks:'個股觀察',stock:`${route.id} 個股觀察`}[route.page];byId('pageHeading').textContent=title;document.title=`${title}｜台股健診雷達`;
+    const title={home:'紅綠燈',market:'大盤觀察',stocks:'個股查詢',predictions:'漲跌預測',composite:'綜合排名',sectors:'族群',stock:`${route.id} 個股查詢`}[route.page];byId('pageHeading').textContent=title;document.title=`${title}｜台股健診雷達`;
     byId('routeStatus').hidden=route.valid;byId('routeStatus').textContent=route.valid?'':'這個頁面連結無法辨識，已返回首頁。';hideSuggestions();
     if(changed||reloadDetail){++selectionGeneration;if(detail)showStock(route.id);}
     if(changed)requestAnimationFrame(()=>{window.scrollTo({top:scrollPositions.get(route.hash)||0,behavior:'instant'});byId('pageHeading').focus({preventScroll:true});});
@@ -335,8 +458,8 @@ function init(){
   }
   const presets=[{label:'投信＋買超分點＋量能 5 日紅',states:[{id:'trust_5',state:'RED'},{id:'broker_buy_5',state:'RED'},{id:'volume_5',state:'RED'}],counts:[]},{label:'紅 ≥ 8、綠 ≤ 2',states:[],counts:[{field:'positive_lights',min:8,max:null},{field:'negative_lights',min:null,max:2}]},{label:'資料日新增紅 ≥ 3',states:[],counts:[{field:'new_positive_today',min:3,max:null}]}];
   const setFilter=value=>{filter=structuredClone(value);filterLimit=100;byId('stateConditions').replaceChildren();byId('countConditions').replaceChildren();filter.states.forEach(addState);filter.counts.forEach(addCount);paintFilter();};
-  byId('stockSearch').addEventListener('submit',event=>{event.preventDefault();const query=byId('stockQuery').value.trim().toLocaleLowerCase('zh-TW'),exact=stocks.filter(stock=>stock.stock_id.toLocaleLowerCase('zh-TW')===query||stock.name.toLocaleLowerCase('zh-TW')===query),matches=exact.length?exact:searchStocks(stocks,query,Infinity);if(query&&matches.length===1){byId('searchStatus').textContent='';location.hash=`#stock/${matches[0].stock_id}`;}else{byId('searchStatus').textContent=matches.length>1?'有多檔符合，請選擇建議或輸入完整代號。':buildReady?'查無此股票。請嘗試代號、完整或部分名稱。':'搜尋資料尚未載入。';suggestions();}});
-  byId('stockQuery').addEventListener('input',()=>{byId('searchStatus').textContent='';suggestions();});byId('stockQuery').addEventListener('keydown',event=>{if(event.key==='Escape')hideSuggestions();});
+  byId('stockSearch').addEventListener('submit',event=>{event.preventDefault();const query=byId('stockQuery').value.trim().toLocaleLowerCase('zh-TW'),codeExact=stocks.filter(stock=>stock.stock_id.toLocaleLowerCase('zh-TW')===query),exact=codeExact.length?codeExact:stocks.filter(stock=>stock.name.toLocaleLowerCase('zh-TW')===query),matches=exact.length?exact:searchStocks(stocks,query,Infinity);if(query&&matches.length===1){byId('searchStatus').textContent='';location.hash=`#stock/${matches[0].stock_id}`;}else{byId('searchStatus').textContent=matches.length>1?'有多檔符合，請選擇建議或輸入完整代號。':buildReady?'查無此股票。請嘗試代號、完整或部分名稱。':'搜尋資料尚未載入。';suggestions();}});
+  byId('stockQuery').addEventListener('input',()=>{byId('searchStatus').textContent='';if(!byId('stockQuery').value.trim()&&route.page==='stock')location.hash='#stocks';suggestions();});byId('stockQuery').addEventListener('keydown',event=>{if(event.key==='Escape')hideSuggestions();});
   byId('rankingMore').addEventListener('click',()=>{if(!netRanking)return;rankingVisible[rankingMarket]=marketRankingPage(netRanking.rows,rankingMarket,rankingVisible[rankingMarket]).nextShown;paintRanking();});
   for(const market of Object.keys(RANKING_MARKETS))byId(`ranking${market}`).addEventListener('click',()=>{if(!netRanking)return;rankingMarket=market;paintRanking();});
   byId('addState').addEventListener('click',()=>addState());byId('addCount').addEventListener('click',()=>addCount());
@@ -368,7 +491,7 @@ function init(){
   mountMarketIndicators();
   loadBuild();
 }
-if(typeof document!=='undefined')init();
+if(typeof document!=='undefined'&&document.getElementById('stockSearch'))init();
 
 export function validateMargin(body){
  if(body?.schema!=='PUBLIC_MARKET_MARGIN_V1'||body.chart?.anchor_date!=='2025-04-09'||body.chart?.use_in_model_features!==false||body.chart?.custom_anchor_enabled!==true||!Array.isArray(body.calendar)||body.calendar.at(-1)!==body.as_of||body.calendar.join()!==[...new Set(body.calendar)].sort().join())throw dataError();

@@ -14,9 +14,9 @@
 
   <title>大盤觀察｜台股健診雷達</title>
 
-  <link rel="stylesheet" href="./research.css?v=market-indicators-20261029-v1">
+  <link rel="stylesheet" href="./research.css?v=ranking-ui-20261029-v1">
 
-  <script type="module" src="./research.js?v=market-indicators-20261029-v1"></script>
+  <script type="module" src="./research.js?v=ranking-ui-20261029-v1"></script>
 
 </head>
 
@@ -27,15 +27,13 @@
   <header class="site-head"><div><h1>台股健診雷達</h1><p class="muted">公開研究觀察</p></div><span class="local-label">已保存的研究資訊</span></header>
 
   <nav class="radar-nav" aria-label="主要導覽">
-
     <a class="radar-tab active" href="#market" data-route-tab="market" aria-current="page">大盤</a>
-
-    <a class="radar-tab" href="#home" data-route-tab="home">首頁</a>
-
-    <a class="radar-tab" href="#stocks" data-route-tab="stocks">個股觀察</a>
-
-    <a class="radar-tab" href="../research-showcases/model-observation/">模型機率・火藥桶</a>
-
+    <a class="radar-tab" href="#home" data-route-tab="home">紅綠燈</a>
+    <a class="radar-tab" href="#predictions" data-route-tab="predictions">漲跌預測</a>
+    <a class="radar-tab" href="#composite" data-route-tab="composite">綜合排名</a>
+    <a class="radar-tab" href="#stocks" data-route-tab="stocks">個股查詢</a>
+    <a class="radar-tab" href="#sectors" data-route-tab="sectors">族群</a>
+    <a class="radar-tab" href="../research-showcases/model-observation/#firebarrel">火藥桶</a>
   </nav>
 
   <div class="page-heading"><div><div class="eyebrow">RESEARCH OBSERVATION</div><h2 id="pageHeading" tabindex="-1">大盤觀察</h2></div><span class="public-disclaimer">研究觀察資訊，非投資建議</span></div>
@@ -46,9 +44,7 @@
 
   <p id="routeStatus" class="muted small" role="status" hidden></p>
 
-  <div id="stockListView" hidden>
-
-    <section class="search-section" aria-labelledby="searchHeading">
+  <div id="sharedStockSearch" class="shared-stock-search" hidden>    <section class="search-section" aria-labelledby="searchHeading">
 
       <h3 id="searchHeading">查看一檔股票（全部市場）</h3>
 
@@ -56,7 +52,11 @@
 
       <div id="stockSuggestions" class="search-suggestions" hidden></div><p id="searchStatus" class="muted small" role="status"></p>
 
-    </section>
+    </section></div>
+
+  <div id="stockListView" hidden>
+
+
 
     <section aria-labelledby="rankingHeading"><div class="section-heading"><div><div class="eyebrow">SHORT SIGNAL OBSERVATION</div><h3 id="rankingHeading">今日淨紅燈排行｜上市 Top 50</h3></div><span class="chip">已保存的每日榜單</span></div><div id="rankingMarkets" class="ranking-market-switch" role="group" aria-label="榜單市場"><button id="rankingTWSE" type="button" class="ranking-market-button active" aria-pressed="true" aria-controls="rankingRows">上市 Top 50</button><button id="rankingTPEX" type="button" class="ranking-market-button" aria-pressed="false" aria-controls="rankingRows">上櫃 Top 50</button></div><p id="rankingScope" class="footnote">依保存的市場分類，各自從完整排名取前 50 名，維持保存順序；未提供市場分類者不列入任一榜。</p><p id="rankingDate" class="signal-date"></p><div class="signal-legend"><span class="signal-badge red">● 紅：正向</span><span class="signal-badge green">● 綠：負向</span><span class="signal-badge gray">● 灰：條件未達</span><span class="signal-badge missing">? 資料不足</span></div><p class="footnote">淨紅燈＝正向紅燈－負向綠燈；不加權，灰燈與缺資料不作負值。此值只用於排行，不是模型、勝率、推薦榜、買進榜或績效排名。燈號描述保存資料是否符合固定門檻。買超與賣超分點分開觀察，可能同時出現；分點與法人資訊可能重疊，不能直接相加。</p><div id="rankingRows" class="signal-ranking"></div><div id="rankingControls" class="ranking-controls" hidden><p id="rankingProgress" class="footnote" role="status" aria-live="polite"></p><button id="rankingMore" type="button" class="secondary" aria-controls="rankingRows">顯示更多（21–40）</button></div>
 
@@ -73,8 +73,26 @@
 
   <section id="marketView" aria-label="大盤觀察"><p id="marketDate" class="signal-date"></p><section id="marketIndicators" class="card detail-section market-indicator-panel" aria-label="大盤指標比較"><h3>大盤指標與變化</h3><p>正在核對保存的指標摘要…</p></section><div id="marketCards" class="market-cards"></div><section id="marketMargin" class="card detail-section"></section><div id="marketResearch"></div><div id="marketNotes" class="notice"></div></section>
 
+<section id="predictionsView" class="rank-page" hidden aria-label="漲跌預測"><h3>漲跌預測</h3>
+ <p>使用已保存的 V1 結果，模型分開排名。H20 是未來 20 個市場交易日的價格報酬，不含現金股利；機率不是預估漲幅。</p>
+ <div class="notice">事後補算參考（POST_CUTOFF_REPLAY），尚未通過真正前瞻驗證。上漲 &gt; +0.1%；下跌 &lt; −0.1%；其間為平盤。三種機率合計約 100%。</div>
+ <div id="predictionControls"></div><p id="predictionStatus" role="status" class="signal-date">正在核對保存結果…</p>
+ <p class="notice" id="predictionOverlap" hidden>PLUS7 已使用價量七燈；綜合排名再加燈號會有重複加權的可能。此分數僅供排序試用。</p>
+ 
+ <div id="predictionRows" class="rank-grid"></div><button id="predictionMore" class="secondary" hidden>顯示更多</button>
+ <details><summary>資料不足／未納排名</summary><ul id="predictionMissing" class="rank-missing"></ul></details><p id="predictionVersion" class="rank-version"></p></section>
+<section id="compositeView" class="rank-page" hidden aria-label="綜合排名"><h3>綜合排名 · 試用版</h3>
+ <p>使用已保存的 V1 結果，模型分開排名。H20 是未來 20 個市場交易日的價格報酬，不含現金股利；機率不是預估漲幅。</p>
+ <div class="notice">事後補算參考（POST_CUTOFF_REPLAY），尚未通過真正前瞻驗證。上漲 &gt; +0.1%；下跌 &lt; −0.1%；其間為平盤。三種機率合計約 100%。</div>
+ <div id="compositeControls"></div><p id="compositeStatus" role="status" class="signal-date">正在核對保存結果…</p>
+ <p class="notice" id="compositeOverlap" hidden>PLUS7 已使用價量七燈；綜合排名再加燈號會有重複加權的可能。此分數僅供排序試用。</p>
+ <details class="rank-explain" open><summary>分數怎麼算</summary><p id="compositeExplanation"></p><p>15%＋18 燈與 12%＋19 燈不能直接相加判高低；要看有效燈分母與完整股票池的兩項百分位。</p></details>
+ <div id="compositeRows" class="rank-grid"></div><button id="compositeMore" class="secondary" hidden>顯示更多</button>
+ <details><summary>資料不足／未納排名</summary><ul id="compositeMissing" class="rank-missing"></ul></details><p id="compositeVersion" class="rank-version"></p></section>
+<section id="sectorsView" class="rank-page" hidden aria-label="族群"><h3>族群成交熱度</h3><p>看各族群成交金額占市場比重，與自己過去的占比比較；成交金額不是淨流入。</p><div class="notice">交易金額歷史已保存，但每日互斥產業分類與歷史成分還沒接妥。此版保留入口與指標口徑，尚不產生族群排名。</div><div class="rank-grid"><article class="rank-card"><h4>成交占比變化</h4><p>當日族群成交金額 ÷ 同日合格市場成交金額。</p><p>與昨日及前 5／10／20 個交易日平均比較，前期平均不含當日。先按增加百分點排名，並列相對增幅與有效天數。</p><strong>待分類與歷史覆蓋核對</strong></article><article class="rank-card"><h4>族群漲跌與廣度</h4><p>搭配族群漲跌、上漲家數比例、成交放大比例，避免只被少數大型股影響。缺日、新股與停牌分別標示。</p><strong>待相同股票池核對</strong></article></div><p><a href="../research-showcases/taxonomy-v2/">查看已保存的多族群分類 →</a></p><p class="footnote">多重概念分類可能重複歸屬，不能相加宣稱占全市場 100%。現有分類展示不等於已完成成交熱度計算；缺項不填零。</p></section>
   <div id="stockDetailView" hidden><a class="return-list" href="#stocks">← 返回個股列表</a><p id="detailStatus" class="load-status" role="status" aria-live="polite"></p><section id="stockDetail"></section></div>
 
+  <div class="research-extra-links"><a href="../research-showcases/taxonomy-v2/">多族群</a><a href="../research-showcases/abf-activity/">ABF 活動</a><a href="../research-showcases/model-observation/">原模型／火藥桶與私人 ETF 入口</a></div>
   <footer class="public-footer"><p>研究觀察資訊，非投資建議。公開頁面呈現已保存資料，資料日與發布時間可能不同。灰燈或資料不足不代表零風險。</p><p id="publicationFooter" class="small muted"></p></footer>
 
 </main>
