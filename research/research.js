@@ -31,7 +31,7 @@ const badge=state=>`<span class="signal-badge ${state.toLowerCase()}">${state===
 const validId=id=>typeof id==='string'&&/^[A-Za-z0-9]+$/.test(id);
 export const validDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value+'T00:00:00Z'))&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
 export function parseRoute(hash=''){
-  if(!hash||hash==='#')return {page:'home',id:null,hash:'#home',valid:true};
+  if(!hash||hash==='#')return {page:'market',id:null,hash:'#market',valid:true};
   if(['#home','#market','#stocks'].includes(hash))return {page:hash.slice(1),id:null,hash,valid:true};
   const match=/^#stock\/([A-Za-z0-9]+)$/.exec(hash);
   return match?{page:'stock',id:match[1],hash,valid:true}:{page:'home',id:null,hash:'#home',valid:false};
@@ -153,7 +153,7 @@ const percent=value=>typeof value==='number'&&Number.isFinite(value)?`${value>0?
 const indexNames={TAIEX:'加權指數',TPEx:'櫃買指數'};
 const point=value=>typeof value==='number'&&Number.isFinite(value)?value.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2}):'資料不足';
 const signedPoint=value=>typeof value==='number'&&Number.isFinite(value)?`${value>0?'+':''}${point(value)}`:'資料不足';
-const researchStates={accumulating_local_peak:'上升段延續',major_local_correction:'修正觀察中'};
+const researchStates={accumulating_local_peak:'上升段延續',major_local_correction:'修正觀察中',local_drawdown_candidate:'局部回撤觀察中'};
 const modelCondition=m=>`${m.side==='M'?'修正段':'上升段'}・${m.cohort==='FIRST_TOUCH'?'首次觸及':m.side==='M'?(m.direction==='RISING'?'回撤加深':'回撤減少'):(m.direction==='RISING'?'漲幅向上穿越':'漲幅向下穿越')}・${m.horizon}交易日・${m.lens==='FULL_HISTORY'?'完整歷史':'原 EX_2008'}`;
 const forecastMode=m=>m.mode==='PROSPECTIVE'&&m.prospective_eligible?'事前保存':m.mode==='POST_CUTOFF_REPLAY'?'事後補算':'未發出估計';
 const probabilityText=value=>typeof value==='number'&&Number.isFinite(value)?`${(value*100).toFixed(2)}%`:'資料不足';
@@ -224,6 +224,57 @@ export function renderStock(body){
   const header=`<article class="card signal-summary"><div class="card-head"><h3>${esc(body.stock_id)} ${esc(body.name)}</h3><span class="chip">可用 ${row.available_light_count} / 40</span></div><p class="signal-date">資料日 ${esc(signals.date)}；新增與熄燈是這個保存資料日的比較。</p><div class="signal-summary-counts"><span class="red">正向紅 <strong>${row.positive_lights}</strong></span><span class="green">負向綠 <strong>${row.negative_lights}</strong></span><span>資料不足 <strong>${row.missing_lights}</strong></span><span>新增紅 <strong>${row.new_positive_today}</strong></span><span>新亮燈 <strong>${row.new_lights_today}</strong></span><span>熄燈 <strong>${row.lights_off_today}</strong></span></div><p class="footnote">面向摘要（正向／負向）</p>${renderFacets(row)}<p class="footnote">${row.transition_unknown_count} 顆前次比較未知。第一次保存或前次資料不足不計為新增／熄燈；紅燈數量不代表勝率。</p></article>`;
   const lights=Object.entries(FACETS).map(([facet,name])=>`<section class="signal-facet"><h4>${name}</h4><div class="signal-grid">${LAMPS.filter(spec=>spec.category===facet).map(spec=>{const lamp=signals.lights.find(l=>l.id===spec.id);return `<details class="signal-lamp ${lamp.state.toLowerCase()}" data-lamp-id="${esc(lamp.id)}"><summary><span class="signal-lamp-title">${esc(lampName(spec))}</span>${badge(lamp.state)}<span class="signal-reading">${esc(lamp.display_value||STATES[lamp.state])}</span></summary><div class="signal-lamp-body">${lamp.metrics.length?`<dl class="signal-metrics">${lamp.metrics.map(metric=>`<div><dt>${esc(metric.label)}</dt><dd>${esc(formatMetric(metric))}</dd></div>`).join('')}</dl>`:'<p>這顆燈未提供可公開的數值明細。</p>'}<dl class="signal-continuity"><div><dt>保存資料日</dt><dd>${esc(lamp.date)}</dd></div><div><dt>首次可確認亮燈</dt><dd>${esc(lamp.first_lit_date||'尚未觀測到確切起點')}</dd></div><div><dt>至少自此已知亮燈</dt><dd>${esc(lamp.known_since||'尚未建立')}</dd></div><div><dt>連續亮燈</dt><dd>${Number.isInteger(lamp.consecutive_lit_days)?`${lamp.streak_left_censored?'至少 ':''}${lamp.consecutive_lit_days} 個交易日`:'未知'}</dd></div><div><dt>前次狀態</dt><dd>${esc(STATES[lamp.previous_state]||'未知')}</dd></div><div><dt>資料日變化</dt><dd>${lamp.transition_known?`${lamp.new_positive_today?'新增紅燈；':''}${lamp.new_lit_today?'新亮燈；':''}${lamp.extinguished_today?'原燈熄滅；':''}${!lamp.new_lit_today&&!lamp.extinguished_today?'無變化':''}`:'比較未知，不計為新增／熄燈'}</dd></div></dl></div></details>`;}).join('')}</div></section>`).join('');
   return header+lights+observation;
+}
+
+export function validateIndicators(data){
+  if(data?.schema!=='MARKET_INDICATORS_DISPLAY_V1'||!validDate(data.as_of)||!Array.isArray(data.metrics)||data.metrics.length>100||data.raw_data_included!==false||data.ETF_holdings_included!==false)throw Error('指標摘要格式未通過核對。');
+  const ids=new Set();
+  for(const m of data.metrics){
+    if(ids.has(m.id)||typeof m.id!=='string'||m.as_of!==data.as_of||m.is_probability!==false||m.trial_lamp!==null||!['AVAILABLE','MISSING'].includes(m.status)||!Array.isArray(m.comparisons)||m.comparisons.map(c=>c.sessions).join()!=='1,5,10,20')throw Error('指標欄位未通過核對。');
+    ids.add(m.id);if(m.status==='AVAILABLE'&&!Number.isFinite(m.value)||m.status==='MISSING'&&m.value!==null)throw Error('缺值不可當成零。');
+    for(const c of m.comparisons){
+      if(c.baseline_date!==data.baseline_dates[String(c.sessions)]||!validDate(c.baseline_date)||c.baseline_date>=data.as_of)throw Error('比較交易日不符。');
+      if(c.difference!==null&&(!Number.isFinite(c.baseline)||!Number.isFinite(m.value)||Math.abs(c.difference-(m.value-c.baseline))>1e-6))throw Error('比較差異不符。');
+    }
+  }
+  if(data.probabilities.map(p=>p.horizon_sessions).join()!=='5,10,20'||data.probabilities.some(p=>p.p_up!==null||p.p_down!==null||p.p_flat!==null||p.status!=='MODEL_NOT_ESTABLISHED'))throw Error('未建立的模型不可顯示機率。');
+  return data;
+}
+
+export function indicatorRows(data,market='TAIEX',group='all',n=1,mode='point'){
+  validateIndicators(data);
+  const groups={price:['price','volume','trend'],institution:['institution'],sample:['sample_institution'],futures:['futures'],breadth:['breadth'],credit:['credit','pending']};
+  if(!['TAIEX','TPEx'].includes(market)||![1,5,10,20].includes(n)||!['point','prior_mean','sum'].includes(mode))throw Error('比較選項無效。');
+  return data.metrics.filter(m=>(!m.id.startsWith('TAIEX_')&&!m.id.startsWith('TPEx_')||m.id.startsWith(market+'_'))&&(group==='all'&&m.category!=='sample_institution'||groups[group]?.includes(m.category))).map(m=>{
+    const c=m.comparisons.find(c=>c.sessions===n);
+    const base=mode==='point'?c.baseline:mode==='prior_mean'?m.prior_means?.[n]??null:null;
+    const delta=mode==='point'?c.difference:mode==='prior_mean'&&Number.isFinite(m.value)&&Number.isFinite(base)?m.value-base:null;
+    const sum=mode==='sum'?m.trailing_sums?.[n]??null:null;
+    const direction=mode==='sum'?(Number.isFinite(sum)?'已計算累計':'不適用／資料不足'):delta===null?'資料不足':delta>0?'增加':delta<0?'減少':'持平';
+    return {...m,baseline:base,delta,sum,direction,baseline_date:c.baseline_date};
+  });
+}
+
+export function renderIndicatorTable(data,{market='TAIEX',group='all',n=1,mode='point'}={}){
+  const fmt=v=>Number.isFinite(v)?v.toLocaleString('zh-TW',{maximumFractionDigits:3}):'—';
+  const sign=v=>Number.isFinite(v)?`${v>0?'+':''}${fmt(v)}`:'—';
+  const baseTitle=mode==='point'?`${n===1?'昨日':`${n} 交易日前`}（${data.baseline_dates[n]}）`:mode==='prior_mean'?`前 ${n} 日均值（不含當日）`:`近 ${n} 日累計（含當日）`;
+  const rows=indicatorRows(data,market,group,n,mode);
+  return `<table class="indicator-table"><thead><tr><th>指標／口徑</th><th>資料日 ${esc(data.as_of)}</th><th>${esc(baseTitle)}</th><th>${mode==='sum'?'狀態':'差異／變化'}</th></tr></thead><tbody>${rows.map(m=>`<tr><td data-label="指標"><strong>${esc(m.label)}</strong><span class="indicator-unit">${esc(m.unit)}${m.sample_count!==undefined?` · 固定樣本 ${m.sample_count}/${m.target_universe_count} 家`:''}</span><details><summary>來源與規則</summary><p>${esc(m.source)}<br>${esc(m.note)}</p></details></td><td data-label="當日"><strong>${fmt(m.value)}</strong>${m.value===null?`<small>當日待資料${m.last_available_date?`；最近可用 ${esc(m.last_available_date)}：${fmt(m.last_available_value)} ${esc(m.unit)}`:''}</small>`:''}</td><td data-label="${esc(baseTitle)}">${fmt(mode==='sum'?m.sum:m.baseline)}${mode!=='point'&&(mode==='sum'?m.sum:m.baseline)===null?'<small>不適用或完整窗口不足</small>':''}</td><td data-label="變化"><span class="indicator-state ${m.direction==='資料不足'?'pending':''}">${esc(m.direction)}</span>${mode==='sum'?'':`<strong class="indicator-change">${sign(m.delta)} ${esc(m.unit)}</strong>`}</td></tr>`).join('')}</tbody></table>`;
+}
+
+async function mountMarketIndicators(){
+  const host=document.getElementById('marketIndicators');if(!host)return;
+  try{
+    const base=new URL('../research-showcases/market-indicators/',location.href);
+    const mr=await fetch(new URL('manifest.json',base),{cache:'no-store'});if(!mr.ok)throw Error();const manifest=await mr.json();
+    if(manifest.schema!=='MARKET_INDICATORS_MANIFEST_V1'||!validDate(manifest.as_of)||manifest.ETF_holdings_included!==false)throw Error();
+    const dr=await fetch(new URL('data.json',base),{cache:'no-cache'});if(!dr.ok)throw Error();const bytes=await dr.arrayBuffer();await verifyResourceBytes(bytes,manifest.files['data.json']);
+    const data=validateIndicators(JSON.parse(new TextDecoder('utf8',{fatal:true}).decode(bytes)));if(data.as_of!==manifest.as_of)throw Error();
+    host.innerHTML=`<div class="section-heading"><div><div class="eyebrow">MARKET DASHBOARD</div><h3>大盤指標與變化</h3></div><span class="chip">描述性狀態・試行介面</span></div><p class="indicator-intro">先看資料，再看變化。增加／減少只描述數值方向，不等於多空訊號或買賣建議。</p><p class="notice">指標比較快照 <strong>${esc(data.as_of)}</strong> · ${data.metrics.filter(m=>m.status==='AVAILABLE').length}/${data.metrics.length} 項當日可用（含兩市場）。此比較快照尚未接上每日自動刷新；缺資料保留「—」，不以舊值補今日。</p><div class="indicator-controls"><label>市場<select id="indicatorMarket"><option value="TAIEX">上市／加權</option><option value="TPEx">上櫃／櫃買</option></select></label><label>指標<select id="indicatorGroup"><option value="all">全部指標</option><option value="price">價格・量能・趨勢</option><option value="institution">現貨法人</option><option value="sample">普通股樣本張數（非金額）</option><option value="futures">台指期部位</option><option value="breadth">市場廣度</option><option value="credit">融資・待接來源</option></select></label><label>比較期間<select id="indicatorPeriod"><option value="1">昨日（1交易日前）</option><option value="5">5交易日前</option><option value="10">10交易日前</option><option value="20">20交易日前</option></select></label><label>比較方式<select id="indicatorMode"><option value="point">指定交易日：當日 − 基準日</option><option value="prior_mean">量能：對前 N 日均值</option><option value="sum">法人：近 N 日淨買賣累計</option></select></label></div><p id="indicatorBasis" class="footnote"></p><div id="indicatorTable" class="table-scroll"></div><div class="indicator-contracts"><details><summary>哪些可以當成大盤燈號？</summary><p>既有市場 State Engine 的上升／局部修正與回撤位置保留於下方。這一版先呈現資料與方向，沒有新增未回測的紅綠綜合分數。</p><p>個股分點集中、相對大盤／產業族群、個股火藥桶的母體與規則不同，不能直接套在指數上。目前未找到可驗證的大盤專用火藥桶規則。</p><p>現貨法人使用交易所全市場有價證券買賣超金額，單位億元；普通股樣本張數另列，不替代資金流。上市與上櫃口徑分開。TX 是台指期法人彙總，非近月單一月份；多空部位含避險、結算與轉倉。</p></details></div><section class="market-outlook"><h3>大盤綜合機率</h3><p class="footnote">價格指數未來交易日報酬；新模型研究中。下方既有 H20／H60 是總報酬、特定觸發條件且排除平盤的研究估計，不能直接填入這裡。</p><div class="outlook-grid">${[5,10,20].map(n=>`<article class="outlook-card"><h4>未來 ${n} 個交易日</h4><span class="indicator-state pending">待建立並驗證</span><dl><div><dt>上漲</dt><dd>—</dd></div><div><dt>下跌</dt><dd>—</dd></div><div><dt>平盤</dt><dd>—</dd></div></dl></article>`).join('')}</div></section>`;
+    const paint=()=>{const opts={market:document.getElementById('indicatorMarket').value,group:document.getElementById('indicatorGroup').value,n:Number(document.getElementById('indicatorPeriod').value),mode:document.getElementById('indicatorMode').value};document.getElementById('indicatorTable').innerHTML=renderIndicatorTable(data,opts);document.getElementById('indicatorBasis').textContent=opts.mode==='point'?`基準日 ${data.baseline_dates[opts.n]} → ${data.as_of}；使用已核實交易日，不是曆日或最近 N 列。`:`${opts.mode==='sum'?'累計含當日，適用法人淨買賣':'均值不含當日，適用量能'}；任一應有交易日缺資料就不計算。台指期部位仍明列 TX，不代表櫃買期貨。`;};
+    for(const id of ['indicatorMarket','indicatorGroup','indicatorPeriod','indicatorMode'])document.getElementById(id).addEventListener('change',paint);paint();
+  }catch{host.innerHTML='<h3>大盤指標與變化</h3>'+empty('指標摘要尚未通過版本或來源核對；其他已發布區塊仍可查看。');}
 }
 
 function init(){
@@ -313,6 +364,7 @@ function init(){
       buildReady=true;paintFilter();applyRoute({reloadDetail:true});
     }catch(error){buildFailed=true;byId('loadStatus').textContent=error.message;byId('loadStatus').classList.add('error');byId('rankingRows').innerHTML=empty('公開保存資料尚未就緒。');byId('homeMarketSummary').innerHTML=empty('大盤摘要尚未就緒。');byId('marketCards').innerHTML=empty('大盤摘要尚未就緒。');byId('detailStatus').textContent='此發布版本尚未通過核對，個股明細暫停顯示。';paintFilter();}
   }
+  mountMarketIndicators();
   loadBuild();
 }
 if(typeof document!=='undefined')init();
