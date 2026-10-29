@@ -350,7 +350,52 @@ export function predictionSortControls(state){
   return `<div class="prediction-sort" role="group" aria-label="機率欄位排序">${Object.entries(predictionSortLabels).map(([field,label])=>`<button type="button" data-prediction-sort="${field}" aria-pressed="${state.field===field}" aria-label="${label}，${state.field===field?(state.order==='desc'?'目前由高到低，點擊改為由低到高':'目前由低到高，點擊改為由高到低'):'點擊由高到低排序'}">${label} ${state.field===field?(state.order==='desc'?'↓':'↑'):'↕'}</button>`).join('')}</div>`;
 }
 const probabilityDifferenceText=d=>{const v=probabilityDifference(d);return v===null?'—':`${v>0?'+':''}${(v*100).toFixed(1)} 百分點`;};
-export const predictionDefinition='可切換未來 1／5／20 個市場交易日的期末價格報酬，並非期間內曾觸及。H1 是下一個市場交易日，不是日曆隔天。上漲超過 +0.1%，下跌低於 −0.1%，其間為持平。多空機率差＝上漲機率−下跌機率，單位百分點，不是預估漲幅。H1／H5 為獨立三類研究模型，保守使用前一交易日特徵；不是 H20 縮放。歷史資料曾被研究，尚未完成前瞻驗證。';
+export const predictionDefinition='同時顯示未來 1／5／20 個市場交易日的期末價格報酬，並非期間內曾觸及。H1 是下一個市場交易日，不是日曆隔天。上漲超過 +0.1%，下跌低於 −0.1%，其間為持平。多空機率差＝上漲機率−下跌機率，單位百分點，不是預估漲幅。H1／H5 為獨立三類研究模型，保守使用前一交易日特徵；不是 H20 縮放。歷史資料曾被研究，尚未完成前瞻驗證。';
+// One stock stays together. Sorting reads exactly one horizon and one model family.
+export const predictionHorizons=[1,5,20];
+export const predictionHorizonLabel=h=>h===1?'下一交易日':`未來 ${h} 個交易日`;
+export function buildPredictionGroups(data,{model=RANK_MODEL_IDS[0],horizon=20,sort={field:'delta',order:'desc'}}={}){
+  if(!RANK_MODEL_IDS.includes(model)||!predictionHorizons.includes(horizon))throw Error('未知模型或排序期間');
+  const byStock=new Map(),periods={};
+  for(const h of predictionHorizons){
+    let v;try{v=selectHorizonData(data,h).v1;}catch(e){periods[h]={error:e.message};continue;}
+    const modelId=modelAtHorizon(model,h);periods[h]={v1:v,model:modelId,date:v.data_date};
+    const add=r=>{if(!byStock.has(r.stock_id))byStock.set(r.stock_id,{stock_id:r.stock_id,name:r.name,market:r.market,periods:{}});return byStock.get(r.stock_id);};
+    for(const r of v.records)add(r).periods[h]={p:r.predictions.find(p=>p.model_id===modelId),date:v.data_date,feature_date:v.feature_date};
+    for(const r of v.not_scored)if(!add(r).periods[h])add(r).periods[h]={date:v.data_date,reason:r.reason||'模型未計分'};
+  }
+  for(const r of byStock.values())for(const h of predictionHorizons)r.periods[h]??={date:periods[h].date||null,reason:periods[h].error||'未在此期間的合格模型池'};
+  const sorted=sortPredictionRanks([...byStock.values()].map(r=>({...r,p:r.periods[horizon].p})),sort);
+  const rows=sorted.map(r=>({...r,prediction_rank:r.p?r.prediction_rank:null}));
+  return {model,horizon,sort,periods,rows,scored:rows.filter(r=>r.p).length,date:periods[horizon].date||null};
+}
+const predictionShortLabels={delta:'多空差',up:'上漲',down:'下跌'};
+export function groupedPredictionCard(r,view){
+  const {horizon,sort,model}=view,primary=r.periods[horizon],direction=sort.field==='down'||(sort.field==='delta'&&sort.order==='asc')?'down':'up';
+  const header=Object.entries(predictionShortLabels).map(([field,label])=>`<th scope="col" aria-sort="${sort.field===field?(sort.order==='desc'?'descending':'ascending'):'none'}"><button type="button" data-prediction-sort="${field}" aria-label="${predictionSortLabels[field]}，${sort.field===field?(sort.order==='desc'?'目前由高到低，點擊改為由低到高':'目前由低到高，點擊改為由高到低'):'點擊由高到低排序'}">${label}<span aria-hidden="true">${sort.field===field?(sort.order==='desc'?' ↓':' ↑'):' ↕'}</span></button></th>`).join('');
+  const rows=predictionHorizons.map(h=>{const x=r.periods[h],d=x.p?.direction3,delta=probabilityDifference(d);return `<tr data-horizon="${h}"${h===horizon?' class="sorting-horizon"':''}><th scope="row">${predictionHorizonLabel(h)}${x.date&&x.date!==primary.date?`<small>資料日 ${esc(x.date)}</small>`:''}</th><td class="rank-difference">${delta===null?'—':`${delta>0?'+':''}${(delta*100).toFixed(1)}`}</td><td class="red">${d?probabilityText(d.p_up):'—'}</td><td class="green">${d?probabilityText(d.p_down):'—'}</td></tr>`;}).join('');
+  const missing=predictionHorizons.filter(h=>!r.periods[h].p).map(h=>`<li>${predictionHorizonLabel(h)}：${esc(r.periods[h].reason)}</li>`).join('');
+  const flat=predictionHorizons.map(h=>`${h}日 ${r.periods[h].p?probabilityText(r.periods[h].p.direction3.p_flat):'—'}`).join('／');
+  return `<article class="rank-card prediction-group" data-group-stock="${esc(r.stock_id)}"><header><span class="rank-number" title="${r.prediction_rank===null?'排序依據缺資料，未納排名':'依所選期間與欄位排名'}">${r.prediction_rank??'—'}</span><a href="#stock/${esc(r.stock_id)}" data-rank-model="${esc(modelAtHorizon(model,horizon))}" data-rank-horizon="${horizon}" data-rank-direction="${direction}"><strong>${esc(r.stock_id)} ${esc(r.name||'')}</strong><small>${esc(r.market||'')} · ${rankModelName(model)}</small></a><small class="group-date">資料日<br>${esc(primary.date||'待資料')}</small></header><table class="prediction-periods"><caption class="sr-only">${esc(r.stock_id)} ${esc(r.name||'')}：三個期間的機率；多空差單位為百分點</caption><colgroup><col class="period-col"><col class="delta-col"><col><col></colgroup><thead><tr><th scope="col">預測期間</th>${header}</tr></thead><tbody>${rows}</tbody></table><div class="prediction-group-notes"><span>多空差：百分點</span><details><summary>平盤${missing?'／缺項':''}</summary><p>平盤機率：${flat}。上漲、下跌、平盤合計約 100%。</p>${missing?`<ul>${missing}</ul>`:''}</details></div></article>`;
+}
+let predictionSortHorizon=20;
+export function predictionHorizonControls(horizon){return `<div class="prediction-horizon" role="group" aria-label="股票排序依據期間"><span>排序依據</span>${predictionHorizons.map(h=>`<button type="button" data-prediction-horizon="${h}" aria-pressed="${h===horizon}">${h===1?'1 日':`${h} 日`}</button>`).join('')}<small>三個期間都顯示</small></div>`;}
+function paintGroupedPredictions(data,el,limit,paint){
+  const model=document.getElementById('predictionModel').value;
+  const view=buildPredictionGroups(data,{model,horizon:predictionSortHorizon,sort:predictionSort}),shown=view.rows;
+  document.getElementById('predictionHorizonControls').innerHTML=predictionHorizonControls(predictionSortHorizon);
+  document.getElementById('predictionSortControls').innerHTML=predictionSortControls(predictionSort);
+  document.getElementById('predictionStatus').textContent=`排序依據：${predictionHorizonLabel(view.horizon)}的${predictionSortLabels[predictionSort.field]}，${predictionSort.order==='desc'?'由高到低 ↓':'由低到高 ↑'} · 資料日 ${view.date||'待資料'} · ${rankModelName(model)} · 可排名 ${view.scored}／${shown.length} 檔，缺值置後。`;
+  document.getElementById('predictionRows').innerHTML=shown.length?shown.slice(0,limit).map(r=>groupedPredictionCard(r,view)).join(''):empty('沒有符合條件的股票。可清除搜尋或切換模型。');
+  const button=document.getElementById('predictionMore');button.hidden=shown.length<=limit;button.onclick=()=>{el.dataset.limit=String(limit+30);paint('predictions',false);};
+  document.getElementById('predictionMissing').innerHTML=shown.filter(r=>!r.p).map(r=>`<li><a href="#stock/${esc(r.stock_id)}">${esc(r.stock_id)} ${esc(r.name||'')}</a>：${esc(r.periods[view.horizon].reason)}</li>`).join('');
+  const h5=view.periods[5],q5=h5.v1?.validation?.[h5.model];
+  document.getElementById('predictionValidation').hidden=false;
+  document.getElementById('predictionValidation').textContent=`H1／H5／H20 均為研究機率，尚未完成前瞻驗證。${q5&&!q5.better_on_both?'5 日版未優於簡單基準，僅供研究觀察。':''}多空差不是預估漲幅。`;
+  document.getElementById('predictionVersion').textContent=predictionHorizons.map(h=>{const p=view.periods[h],v=p.v1;return v?`H${h}：${v.model_version} · ${p.model} · 資料日 ${v.data_date}${v.feature_date?' · 特徵日 '+v.feature_date:''} · ${v.mode} · 保存 ${v.issued_at} · 歷史研究截止 ${v.information_cutoff}。${validationText(v,p.model)}`:`H${h}：${p.error}`;}).join('\n');
+  document.getElementById('predictionOverlap').hidden=!model.includes('PLUS7');
+}
+
 let predictionSort={field:'delta',order:'desc'};
 
 let rankSelection={model:RANK_MODEL_IDS[0],direction:'up',horizon:20};
@@ -369,14 +414,14 @@ export function rankCard(r,kind,direction){
   return `<article class="rank-card"><header><span class="rank-number">${rank}</span><a href="#stock/${esc(r.stock_id)}" data-rank-model="${esc(r.p.model_id)}" data-rank-direction="${direction}" data-rank-horizon="${r.p.model_id.match(/_H(\d+)_/)?.[1]||20}"><strong>${esc(r.stock_id)} ${esc(r.name)}</strong><small>${esc(r.market)}</small></a>${kind==='composite'?`<div class="rank-score"><strong>${r.score.toFixed(2)}</strong><small>綜合分數／100</small></div>`:''}</header><div class="rank-probs"><span class="rank-difference">多空機率差 <b>${probabilityDifferenceText(d)}</b></span><span class="red">上漲機率 <b>${probabilityText(d.p_up)}</b></span><span class="green">下跌機率 <b>${probabilityText(d.p_down)}</b></span><span>平盤機率 <b>${probabilityText(d.p_flat)}</b></span></div>${kind==='composite'?`<div class="rank-light">${direction==='up'?'正向紅燈':'負向綠燈'} <b>${r.light_count} / ${r.available}</b> 有效燈（${(r.light_ratio*100).toFixed(1)}%）<span>另 ${r.missing} 顆資料不足</span></div><details><summary>兩項百分位與計算</summary><p>${direction==='up'?'上漲':'下跌'}機率百分位 <b>${r.probability_percentile.toFixed(2)}</b>；燈號比例百分位 <b>${r.light_percentile.toFixed(2)}</b></p><p>（${r.probability_percentile.toFixed(2)} ＋ ${r.light_percentile.toFixed(2)}）÷ 2 ＝ ${r.score.toFixed(2)}。只在同一合格股票池比較。</p></details>`:`<p class="footnote">依所選機率欄位排序；不是預估漲幅；${rankModelName(r.p.model_id)}。</p>`}</article>`;
 }
 export const rankingExplanation=`綜合分數＝機率百分位 × 50% ＋ 燈號比例百分位 × 50%。上漲榜用正向紅燈，下跌榜用負向綠燈；分母是所有有效燈（含灰燈，不含缺資料）。同日、同期間、同模型、同合格股票池才比較。百分位由低至高：100 ×（平均名次 − 1）／（N − 1），相同值平均名次；只有一檔時兩項均為 50。綜合分數同分，依原方向機率、再代碼排序。這是介面試用排序，不是新機率，也不是已驗證的新模型。`;
-export function rankControls(id){return `${id==='prediction'?`<p class="notice">${predictionDefinition}</p><div id="predictionSortControls">${predictionSortControls(predictionSort)}</div>`:''}<div class="rank-controls"><label>模型<select id="${id}Model">${RANK_MODEL_IDS.map(x=>`<option value="${x}">${rankModelName(x)}</option>`).join('')}</select></label><label>預測期間<select id="${id}Horizon">${[1,5,20].map(h=>`<option value="${h}"${h===20?' selected':''}>${h} 個市場交易日（H${h}）</option>`).join('')}</select></label><label>排序方向<select id="${id}Direction"><option value="up">${id==='prediction'?'偏多：多空差由高到低':'上漲機率由高到低'}</option><option value="down">${id==='prediction'?'偏空：多空差由低到高':'下跌機率由高到低'}</option></select></label><label>找股票<input id="${id}Query" type="search" placeholder="股號或部分名稱"></label></div>`;}
+export function rankControls(id){if(id==='prediction')return `<details class="prediction-definition"><summary>期間與機率怎麼看</summary><p>${predictionDefinition}</p></details><div class="prediction-toprow"><div id="predictionSortControls">${predictionSortControls(predictionSort)}</div><label class="prediction-model">模型<select id="predictionModel">${RANK_MODEL_IDS.map(x=>`<option value="${x}">${rankModelName(x)}</option>`).join('')}</select></label></div><div id="predictionHorizonControls">${predictionHorizonControls(predictionSortHorizon)}</div>`;return `${id==='prediction'?`<p class="notice">${predictionDefinition}</p><div id="predictionSortControls">${predictionSortControls(predictionSort)}</div>`:''}<div class="rank-controls"><label>模型<select id="${id}Model">${RANK_MODEL_IDS.map(x=>`<option value="${x}">${rankModelName(x)}</option>`).join('')}</select></label><label>預測期間<select id="${id}Horizon">${[1,5,20].map(h=>`<option value="${h}"${h===20?' selected':''}>${h} 個市場交易日（H${h}）</option>`).join('')}</select></label><label>排序方向<select id="${id}Direction"><option value="up">${id==='prediction'?'偏多：多空差由高到低':'上漲機率由高到低'}</option><option value="down">${id==='prediction'?'偏空：多空差由低到高':'下跌機率由高到低'}</option></select></label><label>找股票<input id="${id}Query" type="search" placeholder="股號或部分名稱"></label></div>`;}
 export function setupRankingViews(getSummary){
   document.addEventListener('click',event=>{const a=event.target.closest('[data-rank-model]');if(a&&['up','down'].includes(a.dataset.rankDirection)){const h=Number(a.dataset.rankHorizon||20);if([1,5,20].includes(h)&&horizonModels(h).includes(a.dataset.rankModel))rankSelection={model:modelAtHorizon(a.dataset.rankModel,20),direction:a.dataset.rankDirection,horizon:h};}});
   const groups=new Map();let promise;
   const get=()=>promise??=readSavedModels();
   async function paint(kind,reset=true){const el=document.getElementById(kind+'View');if(!el)return;const prefix=kind==='predictions'?'prediction':'composite';
     if(reset)el.dataset.limit='30';const limit=Number(el.dataset.limit||30);
-    try{const data=await get(),model=document.getElementById(prefix+'Model').value,direction=document.getElementById(prefix+'Direction').value,horizon=Number(document.getElementById(prefix+'Horizon').value),summary=getSummary();
+    try{const data=await get();if(kind==='predictions'){paintGroupedPredictions(data,el,limit,paint);return;}const model=document.getElementById(prefix+'Model').value,direction=document.getElementById(prefix+'Direction').value,horizon=Number(document.getElementById(prefix+'Horizon').value),summary=getSummary();
       const key=[model,direction,horizon,summary?.build_id,summary?.as_of].join(':');if(!groups.has(key))groups.set(key,buildDisplayRanks(data,summary,{model,direction,horizon}));const ranks=groups.get(key),rows=kind==='predictions'?sortPredictionRanks(ranks.predictions,predictionSort):ranks.composite,q=document.getElementById(prefix+'Query').value.trim().toLowerCase();
       const shown=rows.filter(r=>(r.stock_id+' '+r.name).toLowerCase().includes(q));
       if(kind==='predictions')document.getElementById('predictionSortControls').innerHTML=predictionSortControls(predictionSort);
@@ -389,8 +434,12 @@ export function setupRankingViews(getSummary){
       document.getElementById(prefix+'Overlap').hidden=!model.includes('PLUS7');
     }catch(e){document.getElementById(prefix+'Status').textContent=e.message;document.getElementById(prefix+'Rows').innerHTML=empty('保留燈號及其他可用資料；不以舊日或零機率補入。');}
   }
-  for(const kind of ['predictions','composite']){const prefix=kind==='predictions'?'prediction':'composite';for(const s of ['Model','Direction','Horizon'])document.getElementById(prefix+s).onchange=()=>{if(kind==='predictions'&&s==='Direction')predictionSort={field:'delta',order:document.getElementById(prefix+s).value==='up'?'desc':'asc'};paint(kind);};document.getElementById(prefix+'Query').oninput=()=>paint(kind);}
-  document.addEventListener('click',e=>{const button=e.target.closest('[data-prediction-sort]');if(!button)return;predictionSort=nextPredictionSort(predictionSort,button.dataset.predictionSort);paint('predictions').then(()=>document.querySelector(`[data-prediction-sort="${predictionSort.field}"]`)?.focus());});
+  for(const kind of ['predictions','composite']){const prefix=kind==='predictions'?'prediction':'composite';for(const s of (kind==='predictions'?['Model']:['Model','Direction','Horizon']))document.getElementById(prefix+s).onchange=()=>{if(kind==='predictions'&&s==='Direction')predictionSort={field:'delta',order:document.getElementById(prefix+s).value==='up'?'desc':'asc'};paint(kind);};if(kind==='composite')document.getElementById(prefix+'Query').oninput=()=>paint(kind);}
+  document.addEventListener('click',e=>{
+    const period=e.target.closest('[data-prediction-horizon]');if(period){const h=Number(period.dataset.predictionHorizon);if(predictionHorizons.includes(h)){predictionSortHorizon=h;paint('predictions').then(()=>document.querySelector(`[data-prediction-horizon="${h}"]`)?.focus());}return;}
+    const button=e.target.closest('[data-prediction-sort]');if(!button)return;const stock=button.closest('[data-group-stock]')?.dataset.groupStock;
+    predictionSort=nextPredictionSort(predictionSort,button.dataset.predictionSort);paint('predictions').then(()=>{const selector=`[data-prediction-sort="${predictionSort.field}"]`; (stock?document.querySelector(`[data-group-stock="${stock}"] ${selector}`)||document.querySelector(selector):document.querySelector(selector))?.focus();});
+  });
   return {paint,get,groups};
 }
 export function validationText(v,id){
