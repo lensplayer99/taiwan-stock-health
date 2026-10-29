@@ -217,13 +217,13 @@ export function renderObservation(observation){
   const path=observation.path.slice(-60);
   return `<section class="detail-section"><h3>生命週期研究摘要</h3><article class="card"><div class="card-head"><h4>${esc(lifecycleNames[observation.lifecycle_state]||'目前狀態待核對')}</h4><span class="pill">${esc(statusLabel(observation.current_status))}</span></div><p class="public-date">資料日 ${esc(observation.date||'未提供')}</p><div class="facts"><div class="fact"><span>距本段起點</span><strong>${percent(observation.gain_from_base)}</strong></div><div class="fact"><span>距保存高點</span><strong>${percent(observation.drawdown_from_peak)}</strong></div><div class="fact"><span>本段經過</span><strong>${Number.isInteger(observation.campaign_age)?`${observation.campaign_age} 交易日`:'資料不足'}</strong></div><div class="fact"><span>本段啟動日</span><strong class="date-value">${esc(observation.trigger_date||'尚未提供')}</strong></div></div><p class="footnote">${observation.price_window_complete===false?'觀察區間資料不完整。':''}研究估計尚待驗證，保存的狀態不代表未來報酬。</p>${path.length?`<details class="source-details"><summary>已保存的生命週期紀錄（最近 ${path.length} 筆）</summary><div class="table-scroll"><table><thead><tr><th>資料日</th><th>保存價格</th><th>狀態</th><th>距起點</th><th>距高點</th></tr></thead><tbody>${path.map(row=>`<tr><td>${esc(row.date)}</td><td>${num(row.close)}</td><td>${esc(lifecycleNames[row.state]||'狀態待核對')}</td><td>${percent(row.gain_from_base)}</td><td>${percent(row.drawdown_from_peak)}</td></tr>`).join('')}</tbody></table></div></details>`:''}</article></section>`;
 }
-export function renderStock(body){
+export function renderStock(body,{showLights=true}={}){
   const signals=body.signals,row=signals.summary;
   const observation=renderObservation(body.observation);
   if(signals.status==='MISSING')return `${empty('此股票未列於這個資料日的訊號保存檔，沒有可顯示的燈號。')}${observation}`;
   const header=`<article class="card signal-summary"><div class="card-head"><h3>${esc(body.stock_id)} ${esc(body.name)}</h3><span class="chip">可用 ${row.available_light_count} / 40</span></div><p class="signal-date">資料日 ${esc(signals.date)}；新增與熄燈是這個保存資料日的比較。</p><div class="signal-summary-counts"><span class="red">正向紅 <strong>${row.positive_lights}</strong></span><span class="green">負向綠 <strong>${row.negative_lights}</strong></span><span>資料不足 <strong>${row.missing_lights}</strong></span><span>新增紅 <strong>${row.new_positive_today}</strong></span><span>新亮燈 <strong>${row.new_lights_today}</strong></span><span>熄燈 <strong>${row.lights_off_today}</strong></span></div><p class="footnote">面向摘要（正向／負向）</p>${renderFacets(row)}<p class="footnote">${row.transition_unknown_count} 顆前次比較未知。第一次保存或前次資料不足不計為新增／熄燈；紅燈數量不代表勝率。</p></article>`;
   const lights=Object.entries(FACETS).map(([facet,name])=>`<section class="signal-facet"><h4>${name}</h4><div class="signal-grid">${LAMPS.filter(spec=>spec.category===facet).map(spec=>{const lamp=signals.lights.find(l=>l.id===spec.id);return `<details class="signal-lamp ${lamp.state.toLowerCase()}" data-lamp-id="${esc(lamp.id)}"><summary><span class="signal-lamp-title">${esc(lampName(spec))}</span>${badge(lamp.state)}<span class="signal-reading">${esc(lamp.display_value||STATES[lamp.state])}</span></summary><div class="signal-lamp-body">${lamp.metrics.length?`<dl class="signal-metrics">${lamp.metrics.map(metric=>`<div><dt>${esc(metric.label)}</dt><dd>${esc(formatMetric(metric))}</dd></div>`).join('')}</dl>`:'<p>這顆燈未提供可公開的數值明細。</p>'}<dl class="signal-continuity"><div><dt>保存資料日</dt><dd>${esc(lamp.date)}</dd></div><div><dt>首次可確認亮燈</dt><dd>${esc(lamp.first_lit_date||'尚未觀測到確切起點')}</dd></div><div><dt>至少自此已知亮燈</dt><dd>${esc(lamp.known_since||'尚未建立')}</dd></div><div><dt>連續亮燈</dt><dd>${Number.isInteger(lamp.consecutive_lit_days)?`${lamp.streak_left_censored?'至少 ':''}${lamp.consecutive_lit_days} 個交易日`:'未知'}</dd></div><div><dt>前次狀態</dt><dd>${esc(STATES[lamp.previous_state]||'未知')}</dd></div><div><dt>資料日變化</dt><dd>${lamp.transition_known?`${lamp.new_positive_today?'新增紅燈；':''}${lamp.new_lit_today?'新亮燈；':''}${lamp.extinguished_today?'原燈熄滅；':''}${!lamp.new_lit_today&&!lamp.extinguished_today?'無變化':''}`:'比較未知，不計為新增／熄燈'}</dd></div></dl></div></details>`;}).join('')}</div></section>`).join('');
-  return header+lights+observation;
+  return header+(showLights?lights:'')+observation;
 }
 
 export function validateIndicators(data){
@@ -376,28 +376,71 @@ export function stockChartSeries(body,calendar){
   // 2026-10-23 closure is already verified in the installed market dashboard calendar evidence.
   // The older margin calendar still carries that null-price date; do not call it a trading day.
   const dates=[...new Set(calendar.filter(validDate))].filter(d=>d<=body.as_of&&d!=='2026-10-23').sort().slice(-20),path=new Map();
-  for(const r of body.observation.path){if(path.has(r.date))throw Error('保存研究價格日期重複。');path.set(r.date,r);}
+  for(const r of body.observation.path){if(path.has(r.date))throw Error('收盤價日期重複。');path.set(r.date,r);}
   return dates.map(date=>({date,price:finite(path.get(date)?.close)?path.get(date).close:null,trust:null,foreign:null,concentration:null}));
 }
 export function stockChartSvg(rows,field){
   const values=rows.map(r=>r[field]).filter(finite),prices=rows.map(r=>r.price).filter(finite),W=680,H=240,left=60,right=615,top=30,bottom=190,n=rows.length;
-  const scale=Math.max(1,...values.map(Math.abs)),minP=prices.length?Math.min(...prices):0,maxP=prices.length?Math.max(...prices):1,range=maxP-minP||1;
-  const x=i=>left+(i+.5)*(right-left)/Math.max(n,1),zero=(top+bottom)/2,py=p=>bottom-(p-minP)/range*(bottom-top);
+  const scale=Math.max(field==='concentration'?0.001:1,...values.map(Math.abs)),minP=prices.length?Math.min(...prices):0,maxP=prices.length?Math.max(...prices):1,range=maxP-minP||1;
+  const x=i=>left+(i+.5)*(right-left)/Math.max(n,1),zero=field==='concentration'?bottom:(top+bottom)/2,py=p=>bottom-(p-minP)/range*(bottom-top);
   let marks='',path='',connected=false;
-  rows.forEach((r,i)=>{if(finite(r[field])){const y=zero-r[field]/scale*(bottom-top)/2;marks+=`<rect x="${x(i)-7}" y="${Math.min(y,zero)}" width="14" height="${Math.max(1,Math.abs(zero-y))}" fill="${r[field]>=0?'#ff9c9b':'#70d8b1'}"/>`;}
+  rows.forEach((r,i)=>{if(finite(r[field])){const y=zero-r[field]/scale*(bottom-top)/(field==='concentration'?1:2);marks+=`<rect x="${x(i)-7}" y="${Math.min(y,zero)}" width="14" height="${Math.max(1,Math.abs(zero-y))}" fill="${r[field]>=0?'#ff9c9b':'#70d8b1'}"/>`;}
     if(finite(r.price)){path+=(connected?' L':' M')+x(i)+' '+py(r.price);connected=true;marks+=`<circle cx="${x(i)}" cy="${py(r.price)}" r="3" fill="#e8c884"/>`;}else connected=false;
-    marks+=`<rect class="stock-chart-hit" data-chart-i="${i}" tabindex="0" role="button" aria-label="${r.date} ${finite(r.price)?'保存研究價格 '+r.price:'價格不足'}；柱值${finite(r[field])?r[field]:'資料不足'}" x="${x(i)-(right-left)/Math.max(n,1)/2}" y="${top}" width="${(right-left)/Math.max(n,1)}" height="${bottom-top}" fill="transparent"><title>${r.date}：保存研究價格 ${num(r.price)}；柱值 ${num(r[field])}</title></rect>`;
+    marks+=`<rect class="stock-chart-hit" data-chart-i="${i}" tabindex="0" role="button" aria-label="${r.date} ${finite(r.price)?'收盤價 '+r.price:'價格不足'}；柱值${finite(r[field])?r[field]:'資料不足'}" x="${x(i)-(right-left)/Math.max(n,1)/2}" y="${top}" width="${(right-left)/Math.max(n,1)}" height="${bottom-top}" fill="transparent"><title>${r.date}：收盤價 ${num(r.price)}；柱值 ${num(r[field])}</title></rect>`;
   });
-  return `<svg class="stock-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="20交易日柱狀圖與保存研究價格；缺資料留空"><line x1="${left}" x2="${right}" y1="${zero}" y2="${zero}" stroke="#48596e"/><text x="10" y="${zero+4}" fill="#b4c2d4">${values.length?'0':'待資料'}</text><path d="${path}" fill="none" stroke="#e8c884" stroke-width="2"/>${marks}<text x="${right+5}" y="${top+4}" fill="#e8c884">${prices.length?num(maxP):'—'}</text><text x="${right+5}" y="${bottom}" fill="#e8c884">${prices.length?num(minP):'—'}</text><text x="${left}" y="225" fill="#aebdd0">${rows[0]?.date||''}</text><text x="${right}" y="225" text-anchor="end" fill="#aebdd0">${rows.at(-1)?.date||''}</text></svg>`;
+  return `<svg class="stock-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="20交易日柱狀圖與未調整收盤價；缺資料留空"><line x1="${left}" x2="${right}" y1="${zero}" y2="${zero}" stroke="#48596e"/><text x="8" y="${top+4}" fill="#b4c2d4">${num(scale)}</text><text x="10" y="${zero+4}" fill="#b4c2d4">${values.length?'0':'待資料'}</text><path d="${path}" fill="none" stroke="#e8c884" stroke-width="2"/>${marks}<text x="${right+5}" y="${top+4}" fill="#e8c884">${prices.length?num(maxP):'—'}</text><text x="${right+5}" y="${bottom}" fill="#e8c884">${prices.length?num(minP):'—'}</text><text x="${left}" y="225" fill="#aebdd0">${rows[0]?.date||''}</text><text x="${right}" y="225" text-anchor="end" fill="#aebdd0">${rows.at(-1)?.date||''}</text></svg>`;
 }
 export function renderStockCharts(body,calendar){
   const rows=stockChartSeries(body,calendar);
-  return `<section class="card detail-section"><h3>20 交易日籌碼與價格</h3><p class="footnote">時間由左至右，舊 → 新。金線為站內已保存研究價格（調整價口徑，非即時或未調整收盤價），右軸：元；缺日斷線。柱狀圖預留左軸，缺資料不畫零柱。可點選日期查看。</p>${[['trust','投信買賣超','張','trust'],['foreign','外資買賣超','張','foreign'],['concentration','分點買超集中度','HHI','broker_buy']].map(([field,title,unit,kind])=>{
+  return `<section class="card detail-section"><h3>20 交易日籌碼與價格</h3><p class="footnote">時間由左至右，舊 → 新。金線為站內已收盤價（調整價口徑，非即時或未調整收盤價），右軸：元；缺日斷線。柱狀圖預留左軸，缺資料不畫零柱。可點選日期查看。</p>${[['trust','投信買賣超','張','trust'],['foreign','外資買賣超','張','foreign'],['concentration','分點買超集中度','HHI','broker_buy']].map(([field,title,unit,kind])=>{
     const metrics=[5,10,20].map(n=>{const l=body.signals.lights.find(l=>l.id===kind+'_'+n),metric=l?.metrics.find(m=>m.label===(field==='concentration'?'同方向HHI集中度':'淨買超／賣超'));return `<span>${n} 日${field==='concentration'?'窗口 HHI':'累計淨額'}：<b>${num(metric?.value)}</b> ${unit}</span>`;}).join('');
     return `<article class="stock-chart-panel" data-chart-field="${field}"><h4>${title}</h4><p>每日柱值尚未接入公開歷史；此版先顯示可用價格與已發布的窗口摘要，不把累計值冒充每日買賣超。</p>${stockChartSvg(rows,field)}<p class="chart-readout" role="status">點選圖上的日期；每日柱值目前資料不足。</p><div class="chart-summary">${metrics}</div>${field==='concentration'?'<p class="footnote">HHI 沿用原分點買超同方向集中度；5／10／20 日為各窗口的聚合結果，並非該日單日 HHI。原始分點明細不公開。</p>':''}</article>`;
   }).join('')}</section>`;
 }
-export function mountChartInteractions(body,calendar){const rows=stockChartSeries(body,calendar);for(const p of document.querySelectorAll('.stock-chart-panel')){const display=e=>{const hit=e.target.closest('[data-chart-i]');if(!hit)return;const r=rows[Number(hit.dataset.chartI)];p.querySelector('.chart-readout').textContent=`${r.date}｜保存研究價格：${num(r.price)} 元；每日柱值：資料不足。`;};p.addEventListener('click',display);p.addEventListener('focusin',display);}}
+export function mountChartInteractions(body,calendar){const rows=stockChartSeries(body,calendar);for(const p of document.querySelectorAll('.stock-chart-panel')){const display=e=>{const hit=e.target.closest('[data-chart-i]');if(!hit)return;const r=rows[Number(hit.dataset.chartI)];p.querySelector('.chart-readout').textContent=`${r.date}｜收盤價：${num(r.price)} 元；每日柱值：資料不足。`;};p.addEventListener('click',display);p.addEventListener('focusin',display);}}
+
+// Read-only chart and industry summaries, produced from adopted source artifacts.
+let stockContextPromise=null;
+export function validateStockContext(d){
+  if(d?.schema!=='STOCK_CONTEXT_DISPLAY_V1'||!validDate(d.as_of)||!Array.isArray(d.dates)||d.dates.length!==20||d.dates.at(-1)!==d.as_of||new Set(d.dates).size!==20||d.dates.some((v,i)=>!validDate(v)||(i&&v<=d.dates[i-1])))throw Error('圖表交易日契約不符。');
+  if(JSON.stringify(d.columns)!==JSON.stringify(['close_ntd','trust_net_lots','foreign_net_lots','buy_hhi_5d']))throw Error('圖表單位契約不符。');
+  for(const [sid,rows] of Object.entries(d.stocks||{})){
+    if(!/^[A-Za-z0-9]{2,10}$/.test(sid)||!Array.isArray(rows)||rows.length!==20||rows.some(r=>!Array.isArray(r)||r.length!==4||r.some(v=>v!==null&&!finite(v))||(r[0]!==null&&r[0]<=0)||(r[3]!==null&&(r[3]<0||r[3]>1))))throw Error('圖表資料不完整或值域錯誤。');
+  }
+  if(!Array.isArray(d.sectors?.groups)||!Array.isArray(d.sectors.coverage)||d.sectors.coverage.at(-1)?.date!==d.as_of)throw Error('族群資料日期不一致。');
+  const names=new Set();for(const g of d.sectors.groups){if(typeof g.industry!=='string'||names.has(g.industry))throw Error('族群分類重複。');names.add(g.industry);for(const n of [1,5,10,20]){const c=g.comparisons?.[n];if(!c||c.expected_days!==n||!Number.isInteger(c.valid_days)||c.valid_days<0||c.valid_days>n)throw Error('族群比較基準錯誤。');}}
+  return d;
+}
+export async function readStockContext(){
+  if(!stockContextPromise)stockContextPromise=(async()=>{const root=new URL('../research-showcases/stock-context/',location.href),r=await fetch(new URL('manifest.json',root),{cache:'no-store'});if(!r.ok)throw Error('圖表資料尚未發布。');const m=await r.json();if(m.schema!=='STOCK_CONTEXT_MANIFEST_V1')throw Error('圖表版本不符。');const f=await fetch(new URL('data.json',root),{cache:'no-cache'});if(!f.ok)throw Error('圖表資料暫時不可讀。');const bytes=await f.arrayBuffer();await verifyResourceBytes(bytes,{sha256:m.data_sha256,bytes:m.data_bytes});const d=validateStockContext(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)));if(d.as_of!==m.as_of)throw Error('圖表收據日期不同。');return d;})().catch(e=>{stockContextPromise=null;throw e;});
+  return stockContextPromise;
+}
+export function contextChartRows(data,id,day){
+  if(data.as_of!==day)throw Error(`圖表資料日 ${data.as_of}，目前個股 ${day}，尚待同日更新。`);
+  const values=data.stocks[id];return data.dates.map((date,i)=>({date,price:values?.[i]?.[0]??null,trust:values?.[i]?.[1]??null,foreign:values?.[i]?.[2]??null,concentration:values?.[i]?.[3]??null}));
+}
+export function contextChartsHtml(rows){
+  const defs=[['trust','投信每日買賣超','張'],['foreign','外資每日買賣超','張'],['concentration','分點買超集中度｜滾動 5 日 HHI','HHI']];
+  return `<h3>近 20 交易日籌碼與收盤價</h3><p class="footnote">由左至右，舊 → 新。金線：未調整收盤價（右軸／元）；柱：左軸標示單位。紅為買超、綠為賣超；集中度高低不代表多空。缺值留白、價格缺日斷線，可點選日期。</p>${defs.map(([field,title,unit])=>`<article class="stock-chart-panel" data-chart-field="${field}" data-chart-unit="${unit}"><h4>${title}</h4><p class="footnote">柱值 ${rows.filter(r=>finite(r[field])).length}／20 日；收盤價 ${rows.filter(r=>finite(r.price)).length}／20 日${field==='concentration'?'。原規則按最近5個交易日彙總各分點淨買超，正值占比平方和（0–1）；每根柱為該日的5日窗口，並非單日HHI。未保存或未通過原資格檢查者留白。':''}</p>${stockChartSvg(rows,field)}<p class="chart-readout" role="status">點選圖上的日期查看 ${unit} 與收盤價。</p></article>`).join('')}`;
+}
+export async function mountSavedCharts(body,alive=()=>true){
+  const host=document.getElementById('savedStockCharts');
+  try{const d=await readStockContext();if(!alive())return;const rows=contextChartRows(d,body.stock_id,body.as_of);host.innerHTML=contextChartsHtml(rows);
+    for(const panel of host.querySelectorAll('.stock-chart-panel')){const show=e=>{const hit=e.target.closest('[data-chart-i]');if(!hit)return;const row=rows[Number(hit.dataset.chartI)];panel.querySelector('.chart-readout').textContent=`${row.date}｜收盤價 ${finite(row.price)?num(row.price)+' 元':'缺資料'}｜${panel.dataset.chartField==='concentration'?'5日HHI':'淨買賣'} ${finite(row[panel.dataset.chartField])?num(row[panel.dataset.chartField]):'缺資料'} ${panel.dataset.chartUnit}`;};panel.addEventListener('click',show);panel.addEventListener('focusin',show);}
+  }catch(e){if(alive())host.innerHTML=`<h3>近20交易日圖表</h3>${empty(e.message+' 不用其他日期或0替代。')}`;}
+}
+export function sectorSorted(data,n){
+  if(![1,5,10,20].includes(n))throw Error('無效比較期間');
+  return [...data.sectors.groups].sort((a,b)=>{const av=a.comparisons[n].delta_pp,bv=b.comparisons[n].delta_pp;return (finite(av)?0:1)-(finite(bv)?0:1)||(finite(bv)&&finite(av)?bv-av:0)||a.industry.localeCompare(b.industry,'zh-TW');});
+}
+export function sectorCards(data,n){
+  return sectorSorted(data,n).map((g,i)=>{const c=g.comparisons[n];return `<article class="rank-card sector-card"><header><span class="rank-number">${finite(c.delta_pp)?i+1:'—'}</span><strong>${esc(g.industry)}</strong><div class="rank-score"><strong class="${c.delta_pp>=0?'red':'green'}">${finite(c.delta_pp)?(c.delta_pp>=0?'+':'')+c.delta_pp.toFixed(3):'—'}</strong><small>占比增減百分點</small></div></header><div class="rank-facts"><div><span>今日成交占比</span><b>${num(g.share_pct)}%</b></div><div><span>${n===1?'昨日占比':`前${n}日平均占比`}</span><b>${num(c.prior_mean_pct)}%</b></div><div><span>相對增幅</span><b>${finite(c.relative_pct)?(c.relative_pct>=0?'+':'')+c.relative_pct.toFixed(2)+'%':'—'}</b></div><div><span>成交金額</span><b>${finite(g.turnover_ntd)?(g.turnover_ntd/1e8).toFixed(2)+' 億元':'缺資料'}</b></div><div><span>有效成交資料</span><b>${g.valid_turnover}/${g.members} 檔</b></div><div><span>比較有效日</span><b>${c.valid_days}/${c.expected_days} 日</b></div><div><span>等權平均漲跌</span><b>${num(g.mean_return_pct)}%（${g.return_n} 檔）</b></div><div><span>上漲家數</span><b>${g.up_count}/${g.return_n}</b></div><div><span>成交量高於前20日均量</span><b>${g.volume_expanded_count}/${g.volume_n}</b></div></div>${c.valid_days<n?'<p class="notice">比較歷史不足，排名只依已知日期，請一併看有效日數。</p>':''}</article>`;}).join('');
+}
+export async function mountSectors(){
+  const host=document.getElementById('sectorContent');if(!host)return;
+  try{const d=await readStockContext(),c=d.sectors.coverage.at(-1);host.innerHTML=`<p class="signal-date">資料日 ${esc(d.as_of)} · ${d.sectors.groups.length} 個互斥分類（含未分類）</p><p>比較各族群自己的成交占比，預設依較前20日平均增加的百分點排序。這是成交熱度，並非資金淨流入。</p><div class="rank-controls"><label>比較基準<select id="sectorBaseline"><option value="20">前20交易日平均</option><option value="10">前10交易日平均</option><option value="5">前5交易日平均</option><option value="1">昨日</option></select></label></div><p class="notice">分母為本站各日合格普通股樣本的已知成交額，非交易所完整市場：今日 ${c.valid_turnover}/${c.eligible_members} 檔成交有效、${c.classified}/${c.eligible_members} 檔有分類。包含未分類；不含ETF等其他證券。缺值不補0。</p><div id="sectorCards" class="rank-grid"></div><details class="source-details"><summary>分類、基準與每日覆蓋</summary><p>${esc(d.sectors.classification)}。${esc(d.sectors.baseline)}。漲跌採既有可比調整價日報酬的等權平均；量能廣度以前20日均量（不含今日）作基準。不是市值加權族群指數。</p><div class="table-scroll"><table><thead><tr><th>日期</th><th>成交有效／母體</th><th>已分類</th><th>分母億元</th></tr></thead><tbody>${d.sectors.coverage.map(r=>`<tr><td>${r.date}</td><td>${r.valid_turnover}/${r.eligible_members}</td><td>${r.classified}</td><td>${finite(r.denominator_ntd)?(r.denominator_ntd/1e8).toFixed(2):'缺資料'}</td></tr>`).join('')}</tbody></table></div></details>`;const paint=()=>document.getElementById('sectorCards').innerHTML=sectorCards(d,Number(document.getElementById('sectorBaseline').value));document.getElementById('sectorBaseline').onchange=paint;paint();
+  }catch(e){host.innerHTML=empty(e.message+' 保留其他頁面；未提供數值不補0。');}
+}
 
 function init(){
   const byId=id=>document.getElementById(id);
@@ -427,7 +470,7 @@ function init(){
     try{
       const body=await detailCache.get(`${manifest.build_id}:${id}`,async()=>validateDetail(await read(`data/stocks/${id}.json`,SCHEMAS.detail),stock,signal?.byStock.get(id)));
       if(generation!==selectionGeneration||route.page!=='stock'||route.id!==id)return;
-      byId('stockDetail').innerHTML='<section id="stockModelRanks" class="card stock-model-panel"><h3>漲跌預測與綜合排名</h3><p>正在讀取保存結果…</p></section>'+renderStockCharts(body,margin?.calendar||[])+renderStock(body);mountChartInteractions(body,margin?.calendar||[]);mountStockRanks(body,summary,()=>generation===selectionGeneration&&route.page==='stock'&&route.id===id);byId('detailStatus').textContent=body.signals.status==='AVAILABLE'?`已讀取資料日 ${body.signals.date} 的 40 顆燈號。`:'此股票目前未提供短期訊號，以下顯示已保存研究摘要。';
+      byId('stockDetail').innerHTML='<section id="stockModelRanks" class="card stock-model-panel"><h3>漲跌預測與綜合排名</h3><p>正在讀取保存結果…</p></section>'+'<section id="savedStockCharts" class="card detail-section"><h3>近20交易日圖表</h3><p>正在讀取保存結果…</p></section>'+renderStock(body,{showLights:false});mountSavedCharts(body,()=>generation===selectionGeneration&&route.page==='stock'&&route.id===id);mountStockRanks(body,summary,()=>generation===selectionGeneration&&route.page==='stock'&&route.id===id);byId('detailStatus').textContent=body.signals.status==='AVAILABLE'?`已讀取資料日 ${body.signals.date} 的摘要、機率與圖表；完整燈號請見紅綠燈分頁。`:'此股票目前未提供短期訊號，以下顯示已保存研究摘要。';
     }catch(error){if(generation!==selectionGeneration||route.page!=='stock'||route.id!==id)return;byId('detailStatus').textContent=error.message;byId('stockDetail').innerHTML=empty('個股明細暫時無法顯示。可返回列表查看其他股票；此處不會以其他日期資料代替。');}
   }
   function applyRoute({reloadDetail=false}={}){
@@ -437,7 +480,7 @@ function init(){
     if(changed&&['home','stocks'].includes(route.page)){rankingVisible={TWSE:RANKING_PAGE_SIZE,TPEX:RANKING_PAGE_SIZE};paintRanking();}
     if(location.hash!==route.hash)history.replaceState(null,'',`${location.pathname}${location.search}${route.hash}`);
     const detail=route.page==='stock',isMarket=route.page==='market',isSectors=route.page==='sectors',rankPage=['predictions','composite'].includes(route.page),tab=detail?'stocks':route.page;
-    document.body.dataset.route=route.page;byId('stockListView').hidden=detail||isMarket||rankPage||isSectors;byId('sharedStockSearch').hidden=isMarket||rankPage||isSectors;byId('sectorsView').hidden=!isSectors;byId('predictionsView').hidden=route.page!=='predictions';byId('compositeView').hidden=route.page!=='composite';if(rankPage)rankViews.paint(route.page);byId('marketView').hidden=!isMarket;byId('stockDetailView').hidden=!detail;byId('homeMarketSection').hidden=route.page!=='home';
+    document.body.dataset.route=route.page;byId('stockListView').hidden=detail||isMarket||rankPage||isSectors;byId('sharedStockSearch').hidden=isMarket||rankPage||isSectors;byId('sectorsView').hidden=!isSectors;byId('predictionsView').hidden=route.page!=='predictions';byId('compositeView').hidden=route.page!=='composite';if(rankPage)rankViews.paint(route.page);if(isSectors)mountSectors();byId('marketView').hidden=!isMarket;byId('stockDetailView').hidden=!detail;byId('homeMarketSection').hidden=route.page!=='home';
     for(const link of document.querySelectorAll('[data-route-tab]')){const active=link.dataset.routeTab===tab;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}
     const title={home:'紅綠燈',market:'大盤觀察',stocks:'個股查詢',predictions:'漲跌預測',composite:'綜合排名',sectors:'族群',stock:`${route.id} 個股查詢`}[route.page];byId('pageHeading').textContent=title;document.title=`${title}｜台股健診雷達`;
     byId('routeStatus').hidden=route.valid;byId('routeStatus').textContent=route.valid?'':'這個頁面連結無法辨識，已返回首頁。';hideSuggestions();
