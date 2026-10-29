@@ -1,20 +1,35 @@
 {
-  "ETF_data_included": false,
-  "FinMind_API_calls": 0,
-  "files": {
-    "display.json": {
-      "bytes": 12745,
-      "sha256": "4e58b26b782b5e5d5a580d1fc3bd3e1ed56586e542ed543eb756d0605b2a3d02"
-    },
-    "index.html": {
-      "bytes": 18680,
-      "sha256": "13ac8b35fb8f2b5374d40ba736f54f93f3eaa00e6d1ff508322ebc8bd92c4104"
+  "schema": "MODEL_FIREBARREL_DISPLAY_MANIFEST_V2",
+  "v1_data_date": "2026-10-28",
+  "firebarrel_snapshot_date": "2026-10-01",
+  "snapshot_only": true,
+  "coverage": {
+    "cache_date_codes": 2361,
+    "official_ordinary_universe": 1988,
+    "outside_universe": 373,
+    "scored": 1732,
+    "not_scored": 256,
+    "errors": 0,
+    "reasons": {
+      "MANDATORY_PRICE_VOLUME_WINDOW_INCOMPLETE": 156,
+      "IDENTITY_CHANGED": 9,
+      "KNOWN_RIGHTS_QUARANTINE": 18,
+      "ANCHOR_INVALID_OR_MISSING": 42,
+      "ORDINARY_LISTING_IDENTITY_UNRESOLVED": 31
     }
   },
-  "firebarrel_snapshot_date": "2026-10-01",
-  "new_inference_calls": 0,
+  "files": {
+    "index.html": {
+      "bytes": 1486868,
+      "sha256": "08886c7710cc19c98386cc1de72dcbb17107880c35965940995a82dadbfc8afa"
+    },
+    "display.json": {
+      "bytes": 1474145,
+      "sha256": "eef9841f437492b19c4415d118361f1955ab5cd7aae22ad52b372a304d736ff0"
+    }
+  },
   "original_model_predictions_modified": false,
-  "schema": "MODEL_FIREBARREL_DISPLAY_MANIFEST_V1",
-  "snapshot_only": true,
-  "v1_data_date": "2026-10-28"
+  "new_training_calls": 0,
+  "FinMind_API_calls": 0,
+  "ETF_data_included": false
 }
