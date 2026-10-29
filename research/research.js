@@ -325,6 +325,25 @@ export function buildDisplayRanks(data,summary,{model=RANK_MODEL_IDS[0],directio
   composite.forEach((r,i)=>r.composite_rank=i+1);
   return {date,model,direction,horizon,predictions,composite,excluded,not_scored:data.v1.not_scored,signal_date:signal?.date??null};
 }
+
+export const probabilityDifference=d=>finite(d?.p_up)&&finite(d?.p_down)?d.p_up-d.p_down:null;
+const predictionSortLabels={delta:'多空機率差',up:'上漲機率',down:'下跌機率'};
+export function nextPredictionSort(current,field){
+  if(!(field in predictionSortLabels))throw Error('未知排序欄位');
+  return {field,order:current.field===field&&current.order==='desc'?'asc':'desc'};
+}
+export function sortPredictionRanks(rows,{field='delta',order='desc'}={}){
+  if(!(field in predictionSortLabels)||!['asc','desc'].includes(order))throw Error('未知排序設定');
+  const value=r=>{const d=r.p?.direction3;return field==='delta'?probabilityDifference(d):d?.[field==='up'?'p_up':'p_down'];};
+  return [...rows].sort((a,b)=>{const x=value(a),y=value(b);if(!finite(x)||!finite(y))return finite(x)?-1:finite(y)?1:stockCodeOrder(a,b);return (order==='desc'?y-x:x-y)||stockCodeOrder(a,b);}).map((r,i)=>({...r,prediction_rank:i+1}));
+}
+export function predictionSortControls(state){
+  return `<div class="prediction-sort" role="group" aria-label="機率欄位排序">${Object.entries(predictionSortLabels).map(([field,label])=>`<button type="button" data-prediction-sort="${field}" aria-pressed="${state.field===field}" aria-label="${label}，${state.field===field?(state.order==='desc'?'目前由高到低，點擊改為由低到高':'目前由低到高，點擊改為由高到低'):'點擊由高到低排序'}">${label} ${state.field===field?(state.order==='desc'?'↓':'↑'):'↕'}</button>`).join('')}</div>`;
+}
+const probabilityDifferenceText=d=>{const v=probabilityDifference(d);return v===null?'—':`${v>0?'+':''}${(v*100).toFixed(1)} 百分點`;};
+export const predictionDefinition='目前為未來 20 個市場交易日（H20）期末相對起點的價格報酬，不是隔天、也不是期間內曾經觸及。上漲：超過 +0.1%；下跌：低於 −0.1%；持平：−0.1% 至 +0.1%。多空機率差＝上漲機率−下跌機率，單位為百分點，不是預估漲幅。5 日、10 日尚未提供。';
+let predictionSort={field:'delta',order:'desc'};
+
 let rankSelection={model:RANK_MODEL_IDS[0],direction:'up'};
 const rankingContextCache=createResourceCache();
 export async function readSavedModels(base=location.href,fetcher=fetch){
@@ -338,10 +357,10 @@ export async function readSavedModels(base=location.href,fetcher=fetch){
 }
 export function rankCard(r,kind,direction){
   const d=r.p.direction3,rank=kind==='composite'?r.composite_rank:r.prediction_rank;
-  return `<article class="rank-card"><header><span class="rank-number">${rank}</span><a href="#stock/${esc(r.stock_id)}" data-rank-model="${esc(r.p.model_id)}" data-rank-direction="${direction}"><strong>${esc(r.stock_id)} ${esc(r.name)}</strong><small>${esc(r.market)}</small></a>${kind==='composite'?`<div class="rank-score"><strong>${r.score.toFixed(2)}</strong><small>綜合分數／100</small></div>`:''}</header><div class="rank-probs"><span class="red">上漲機率 <b>${probabilityText(d.p_up)}</b></span><span class="green">下跌機率 <b>${probabilityText(d.p_down)}</b></span><span>平盤機率 <b>${probabilityText(d.p_flat)}</b></span></div>${kind==='composite'?`<div class="rank-light">${direction==='up'?'正向紅燈':'負向綠燈'} <b>${r.light_count} / ${r.available}</b> 有效燈（${(r.light_ratio*100).toFixed(1)}%）<span>另 ${r.missing} 顆資料不足</span></div><details><summary>兩項百分位與計算</summary><p>${direction==='up'?'上漲':'下跌'}機率百分位 <b>${r.probability_percentile.toFixed(2)}</b>；燈號比例百分位 <b>${r.light_percentile.toFixed(2)}</b></p><p>（${r.probability_percentile.toFixed(2)} ＋ ${r.light_percentile.toFixed(2)}）÷ 2 ＝ ${r.score.toFixed(2)}。只在同一合格股票池比較。</p></details>`:`<p class="footnote">機率高低排序，不是預估漲幅；${rankModelName(r.p.model_id)}。</p>`}</article>`;
+  return `<article class="rank-card"><header><span class="rank-number">${rank}</span><a href="#stock/${esc(r.stock_id)}" data-rank-model="${esc(r.p.model_id)}" data-rank-direction="${direction}"><strong>${esc(r.stock_id)} ${esc(r.name)}</strong><small>${esc(r.market)}</small></a>${kind==='composite'?`<div class="rank-score"><strong>${r.score.toFixed(2)}</strong><small>綜合分數／100</small></div>`:''}</header><div class="rank-probs"><span class="rank-difference">多空機率差 <b>${probabilityDifferenceText(d)}</b></span><span class="red">上漲機率 <b>${probabilityText(d.p_up)}</b></span><span class="green">下跌機率 <b>${probabilityText(d.p_down)}</b></span><span>平盤機率 <b>${probabilityText(d.p_flat)}</b></span></div>${kind==='composite'?`<div class="rank-light">${direction==='up'?'正向紅燈':'負向綠燈'} <b>${r.light_count} / ${r.available}</b> 有效燈（${(r.light_ratio*100).toFixed(1)}%）<span>另 ${r.missing} 顆資料不足</span></div><details><summary>兩項百分位與計算</summary><p>${direction==='up'?'上漲':'下跌'}機率百分位 <b>${r.probability_percentile.toFixed(2)}</b>；燈號比例百分位 <b>${r.light_percentile.toFixed(2)}</b></p><p>（${r.probability_percentile.toFixed(2)} ＋ ${r.light_percentile.toFixed(2)}）÷ 2 ＝ ${r.score.toFixed(2)}。只在同一合格股票池比較。</p></details>`:`<p class="footnote">依所選機率欄位排序；不是預估漲幅；${rankModelName(r.p.model_id)}。</p>`}</article>`;
 }
 export const rankingExplanation=`綜合分數＝機率百分位 × 50% ＋ 燈號比例百分位 × 50%。上漲榜用正向紅燈，下跌榜用負向綠燈；分母是所有有效燈（含灰燈，不含缺資料）。同日、同 H20、同模型、同合格股票池才比較。百分位由低至高：100 ×（平均名次 − 1）／（N − 1），相同值平均名次；只有一檔時兩項均為 50。綜合分數同分，依原方向機率、再代碼排序。這是介面試用排序，不是新機率，也不是已驗證的新模型。`;
-export function rankControls(id){return `<div class="rank-controls"><label>模型<select id="${id}Model">${RANK_MODEL_IDS.map(x=>`<option value="${x}">${rankModelName(x)}</option>`).join('')}</select></label><label>預測期間<select id="${id}Horizon"><option value="20">20 個市場交易日（H20）</option></select></label><label>排序方向<select id="${id}Direction"><option value="up">上漲機率由高到低</option><option value="down">下跌機率由高到低</option></select></label><label>找股票<input id="${id}Query" type="search" placeholder="股號或部分名稱"></label></div>`;}
+export function rankControls(id){return `${id==='prediction'?`<p class="notice">${predictionDefinition}</p><div id="predictionSortControls">${predictionSortControls(predictionSort)}</div>`:''}<div class="rank-controls"><label>模型<select id="${id}Model">${RANK_MODEL_IDS.map(x=>`<option value="${x}">${rankModelName(x)}</option>`).join('')}</select></label><label>預測期間<select id="${id}Horizon"><option value="20">20 個市場交易日（H20）</option></select></label><label>排序方向<select id="${id}Direction"><option value="up">${id==='prediction'?'偏多：多空差由高到低':'上漲機率由高到低'}</option><option value="down">${id==='prediction'?'偏空：多空差由低到高':'下跌機率由高到低'}</option></select></label><label>找股票<input id="${id}Query" type="search" placeholder="股號或部分名稱"></label></div>`;}
 export function setupRankingViews(getSummary){
   document.addEventListener('click',event=>{const a=event.target.closest('[data-rank-model]');if(a&&RANK_MODEL_IDS.includes(a.dataset.rankModel)&&['up','down'].includes(a.dataset.rankDirection))rankSelection={model:a.dataset.rankModel,direction:a.dataset.rankDirection};});
   const groups=new Map();let promise;
@@ -349,8 +368,9 @@ export function setupRankingViews(getSummary){
   async function paint(kind,reset=true){const el=document.getElementById(kind+'View');if(!el)return;const prefix=kind==='predictions'?'prediction':'composite';
     if(reset)el.dataset.limit='30';const limit=Number(el.dataset.limit||30);
     try{const data=await get(),model=document.getElementById(prefix+'Model').value,direction=document.getElementById(prefix+'Direction').value,summary=getSummary();
-      const key=[model,direction,summary?.build_id,summary?.as_of].join(':');if(!groups.has(key))groups.set(key,buildDisplayRanks(data,summary,{model,direction}));const ranks=groups.get(key),rows=kind==='predictions'?ranks.predictions:ranks.composite,q=document.getElementById(prefix+'Query').value.trim().toLowerCase();
+      const key=[model,direction,summary?.build_id,summary?.as_of].join(':');if(!groups.has(key))groups.set(key,buildDisplayRanks(data,summary,{model,direction}));const ranks=groups.get(key),rows=kind==='predictions'?sortPredictionRanks(ranks.predictions,predictionSort):ranks.composite,q=document.getElementById(prefix+'Query').value.trim().toLowerCase();
       const shown=rows.filter(r=>(r.stock_id+' '+r.name).toLowerCase().includes(q));
+      if(kind==='predictions')document.getElementById('predictionSortControls').innerHTML=predictionSortControls(predictionSort);
       document.getElementById(prefix+'Status').textContent=`資料日 ${ranks.date} · ${rankModelName(model)} · H20 · 合格 ${rows.length} 檔；符合搜尋 ${shown.length} 檔。搜尋不改變原排名。${kind==='composite'?`另 ${ranks.excluded.length} 檔缺少合格同日燈號，未納排名。`:''}`;
       document.getElementById(prefix+'Rows').innerHTML=shown.length?shown.slice(0,limit).map(r=>rankCard(r,kind==='predictions'?'predictions':'composite',direction)).join(''):empty('沒有符合條件的股票。可清除搜尋或切換模型。');
       const button=document.getElementById(prefix+'More');button.hidden=shown.length<=limit;button.onclick=()=>{el.dataset.limit=String(limit+30);paint(kind,false);};
@@ -359,15 +379,16 @@ export function setupRankingViews(getSummary){
       document.getElementById(prefix+'Overlap').hidden=!model.includes('PLUS7');
     }catch(e){document.getElementById(prefix+'Status').textContent=e.message;document.getElementById(prefix+'Rows').innerHTML=empty('保留燈號及其他可用資料；不以舊日或零機率補入。');}
   }
-  for(const kind of ['predictions','composite']){const prefix=kind==='predictions'?'prediction':'composite';for(const s of ['Model','Direction','Horizon'])document.getElementById(prefix+s).onchange=()=>paint(kind);document.getElementById(prefix+'Query').oninput=()=>paint(kind);}
+  for(const kind of ['predictions','composite']){const prefix=kind==='predictions'?'prediction':'composite';for(const s of ['Model','Direction','Horizon'])document.getElementById(prefix+s).onchange=()=>{if(kind==='predictions'&&s==='Direction')predictionSort={field:'delta',order:document.getElementById(prefix+s).value==='up'?'desc':'asc'};paint(kind);};document.getElementById(prefix+'Query').oninput=()=>paint(kind);}
+  document.addEventListener('click',e=>{const button=e.target.closest('[data-prediction-sort]');if(!button)return;predictionSort=nextPredictionSort(predictionSort,button.dataset.predictionSort);paint('predictions').then(()=>document.querySelector(`[data-prediction-sort="${predictionSort.field}"]`)?.focus());});
   return {paint,get,groups};
 }
 export async function mountStockRanks(body,summary,alive=()=>true){
   const host=document.getElementById('stockModelRanks');if(!host)return;
   try{const data=await readSavedModels();if(!alive())return;
-    host.innerHTML=`<h3>漲跌預測與綜合排名</h3><p>機率資料日 ${esc(data.v1.data_date)}；燈號資料日 ${esc(summary?.as_of||'未提供')}。H20／價格報酬／POST_CUTOFF_REPLAY。</p><div class="rank-controls"><label>模型<select id="stockRankModel">${RANK_MODEL_IDS.map(x=>`<option value="${x}"${x===rankSelection.model?' selected':''}>${rankModelName(x)}</option>`).join('')}</select></label><label>方向<select id="stockRankDirection"><option value="up"${rankSelection.direction==='up'?' selected':''}>上漲</option><option value="down"${rankSelection.direction==='down'?' selected':''}>下跌</option></select></label></div><div id="stockRankResult"></div><p class="footnote">${rankingExplanation}</p><p class="notice" id="stockRankOverlap" hidden>PLUS7 本身已使用價量七燈；再加入燈號可能重複加權。</p>`;
-    const paint=()=>{const model=document.getElementById('stockRankModel').value,direction=document.getElementById('stockRankDirection').value,ranks=buildDisplayRanks(data,summary,{model,direction}),r=ranks.predictions.find(r=>r.stock_id===body.stock_id),c=ranks.composite.find(r=>r.stock_id===body.stock_id);
-      document.getElementById('stockRankResult').innerHTML=r?`<p>機率排名 ${r.prediction_rank} / ${ranks.predictions.length}${c?`；綜合排名 ${c.composite_rank} / ${ranks.composite.length}`:''}</p>`+rankCard(c||r,c?'composite':'predictions',direction)+(c?'':empty(ranks.excluded.find(r=>r.stock_id===body.stock_id)?.reason||'綜合排名資料不足')):empty('此股尚無合格模型結果：'+(data.v1.not_scored.find(r=>r.stock_id===body.stock_id)?.reason||'未在本次普通股模型池；燈號仍可查看。'));
+    host.innerHTML=`<h3>漲跌預測與綜合排名</h3><p>機率資料日 ${esc(data.v1.data_date)}；燈號資料日 ${esc(summary?.as_of||'未提供')}。H20（20 個市場交易日期末）／價格報酬／POST_CUTOFF_REPLAY。</p><p class="footnote">${predictionDefinition}</p><div class="rank-controls"><label>模型<select id="stockRankModel">${RANK_MODEL_IDS.map(x=>`<option value="${x}"${x===rankSelection.model?' selected':''}>${rankModelName(x)}</option>`).join('')}</select></label><label>方向<select id="stockRankDirection"><option value="up"${rankSelection.direction==='up'?' selected':''}>上漲</option><option value="down"${rankSelection.direction==='down'?' selected':''}>下跌</option></select></label></div><div id="stockRankResult"></div><p class="footnote">${rankingExplanation}</p><p class="notice" id="stockRankOverlap" hidden>PLUS7 本身已使用價量七燈；再加入燈號可能重複加權。</p>`;
+    const paint=()=>{const model=document.getElementById('stockRankModel').value,direction=document.getElementById('stockRankDirection').value,ranks=buildDisplayRanks(data,summary,{model,direction}),r=sortPredictionRanks(ranks.predictions,predictionSort).find(r=>r.stock_id===body.stock_id),c=ranks.composite.find(r=>r.stock_id===body.stock_id);
+      document.getElementById('stockRankResult').innerHTML=r?`<p>${predictionSortLabels[predictionSort.field]}排名 ${r.prediction_rank} / ${ranks.predictions.length}${c?`；綜合排名 ${c.composite_rank} / ${ranks.composite.length}`:''}</p>`+rankCard(c||r,c?'composite':'predictions',direction)+(c?'':empty(ranks.excluded.find(r=>r.stock_id===body.stock_id)?.reason||'綜合排名資料不足')):empty('此股尚無合格模型結果：'+(data.v1.not_scored.find(r=>r.stock_id===body.stock_id)?.reason||'未在本次普通股模型池；燈號仍可查看。'));
       rankSelection={model,direction};document.getElementById('stockRankOverlap').hidden=!model.includes('PLUS7');};document.getElementById('stockRankModel').onchange=paint;document.getElementById('stockRankDirection').onchange=paint;paint();
   }catch(e){if(alive())host.innerHTML=`<h3>漲跌預測與綜合排名</h3>${empty(e.message+' 燈號資料仍可查看。')}`;}
 }
