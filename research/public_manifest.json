@@ -9560,16 +9560,16 @@
       "sha256": "818ae7631075cec4566e97ef504a03c4be7d69e5918a553d708475ce04aaeb31"
     },
     "index.html": {
-      "bytes": 10509,
-      "sha256": "8b332537878ce93d1e790c0964de5a9c9d4019d350a7c05e67796fcf06e95166"
+      "sha256": "fa3186d52004c2edf88f993c1408a3af9cbab25c512821fdb0b7437de3dbbd87",
+      "bytes": 10614
     },
     "research.css": {
-      "bytes": 41620,
-      "sha256": "06a906e44db7dceb9c78192f98c27d9d2742c071fcccdb59648c2633c19be675"
+      "sha256": "06a906e44db7dceb9c78192f98c27d9d2742c071fcccdb59648c2633c19be675",
+      "bytes": 41620
     },
     "research.js": {
-      "bytes": 149651,
-      "sha256": "f8b8e94949c4cce7c61ab10012961d70e99bac55dc486f41383eb5d721dd5d0d"
+      "sha256": "c5dfe13966b3b57a42554ab66f5f71389dc45e73cdd204b82bc5b1abb74f15cc",
+      "bytes": 150805
     }
   },
   "generated_at_utc": "2026-10-29T13:27:36.903200+00:00",

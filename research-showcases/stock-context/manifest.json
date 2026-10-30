@@ -1,7 +1,7 @@
 {
   "schema": "STOCK_CONTEXT_MANIFEST_V1",
   "as_of": "2026-10-29",
-  "data_sha256": "62313265e6106f23de5891a851ccec4a23dc032dd30b423a2c7471de3cb3d35b",
-  "data_bytes": 5754476,
+  "data_sha256": "92059a0d7e891a9ba509adfe75d6f759b63b10b6407312f538c15c3217c1bfc5",
+  "data_bytes": 5765012,
   "stock_count": 2366
 }
