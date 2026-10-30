@@ -182,7 +182,7 @@ export function validateMarket(body,now=new Date()){
   if(body?.schema!=='PUBLIC_MARKET_SUMMARY_V2'||!Array.isArray(body.markets)||body.markets.length!==2||new Set(body.markets.map(r=>r.market)).size!==2)throw dataError();
   const today=taipeiDate(now);
   for(const row of body.markets){
-    const q=currentIndexQuote(row.quote,row.market,body.market_as_of,indicators),r=row.research;
+    const q=row.quote,r=row.research;
     if(!Object.hasOwn(indexNames,row.market)||q?.market!==row.market||q?.kind!=='PRICE_INDEX'||q?.session!=='CLOSE'||r?.basis!=='TOTAL_RETURN_INDEX'||r.as_of!==body.market_as_of)throw dataError();
     if(q.status==='MISSING'){if(q.close!==null||q.date!==null||q.change_points!==null||q.change_ratio!==null)throw dataError();}
     else if(!['AVAILABLE','SAVED_CLOSE'].includes(q.status)||!validDate(q.date)||q.date>today||!Number.isFinite(q.close)||q.close<=0)throw dataError();
@@ -835,7 +835,7 @@ function init(){
       for(let i=0;i<results.length;i++){const result=results[i],kind=Object.keys(fixedResources)[i];if(result.status==='rejected'){failures.push(kind);continue;}try{const body=result.value.body;if(kind==='margin'){validateMargin(body);margin=body;}if(kind==='market'){validateMarket(body);market=body;}if(kind==='search')stocks=validateSearch(body,manifest);if(kind==='summary')summary=body;if(kind==='ranking')ranking=body;}catch{failures.push(kind);}}
       if(summary){try{signal=validateSignalSummary(summary);}catch{signal=null;failures.push('summary');}}
       if(signal&&ranking){try{netRanking=validateRanking(summary,ranking);if(ranking.row_count!==manifest.ranking_count)throw dataError();}catch{netRanking=null;failures.push('ranking');}}
-      byId('homeMarketSummary').innerHTML=renderMarket(market,true);byId('marketCards').innerHTML=renderMarket(market);byId('marketResearch').innerHTML=renderMarketResearch(market);byId('marketDate').textContent=market?`大盤資料日 ${market.market_as_of||manifest.market_as_of}。市場狀態：${statusLabel(market.session_status)}。`:'大盤摘要目前無法讀取。';byId('marketNotes').textContent='行情為已保存收盤資料，非即時報價；模型估計保留其原觀測日。價格指數與含股利研究口徑分開呈現。';
+      byId('homeMarketSummary').innerHTML=renderMarket(market,true);byId('marketCards').innerHTML=renderMarket(market);await mountMarketIndicators(market);byId('marketResearch').innerHTML=renderMarketResearch(market);byId('marketDate').textContent=market?`大盤資料日 ${market.market_as_of||manifest.market_as_of}。市場狀態：${statusLabel(market.session_status)}。`:'大盤摘要目前無法讀取。';byId('marketNotes').textContent='行情為已保存收盤資料，非即時報價；模型估計保留其原觀測日。價格指數與含股利研究口徑分開呈現。';
       if(margin){mountIntegratedMargin(margin);}else{byId('marketMargin').innerHTML=empty('融資資料尚未通過同版完整性核對；暫停顯示。');}
       paintRanking();
       byId('rankingDate').textContent=netRanking?`資料日 ${netRanking.date}，上市／上櫃各取所選排序前 50 名（分段顯示）；新增／熄燈皆是該資料日的比較，不表示今天發出新訊號。`:'淨紅燈排名資料目前無法讀取。';
@@ -843,7 +843,6 @@ function init(){
       buildReady=true;paintFilter();applyRoute({reloadDetail:true});
     }catch(error){buildFailed=true;byId('loadStatus').textContent=error.message;byId('loadStatus').classList.add('error');byId('rankingRows').innerHTML=empty('公開保存資料尚未就緒。');byId('homeMarketSummary').innerHTML=empty('大盤摘要尚未就緒。');byId('marketCards').innerHTML=empty('大盤摘要尚未就緒。');byId('detailStatus').textContent='此發布版本尚未通過核對，個股明細暫停顯示。';paintFilter();}
   }
-  mountMarketIndicators(market);
   loadBuild();
 }
 if(typeof document!=='undefined'&&document.getElementById('stockSearch'))init();
