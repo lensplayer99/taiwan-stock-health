@@ -628,9 +628,55 @@ export const SUPPLY_CHAIN_FRAMES=[
  ['電信',['telecom']],
  ['生技與醫療',['bio_drugs','bio_cdmo','bio_devices']]
 ];
+// Display-only screen, not a predictive score. Uses the accepted daily builder's
+// complete official-session spine, never the last five non-null observations.
+export function themeHeating(data){
+ const fail=reason=>({status:'INSUFFICIENT',as_of:data?.as_of||null,selected:[],qualified:[],evaluated:0,unavailable:[],reason});
+ const dates=data?.dates,t=data?.themes,coverage=data?.sectors?.coverage;
+ if(!validDate(data?.as_of)||t?.as_of!==data.as_of||!Array.isArray(dates)||dates.length!==20||dates.at(-1)!==data.as_of||dates.some((d,i)=>!validDate(d)||(i>0&&d<=dates[i-1])))return fail('SESSION_SPINE_OR_DATE_MISMATCH');
+ const validSpine=rows=>Array.isArray(rows)&&rows.length===21&&rows.every((r,i)=>validDate(r.date)&&(!i||r.date>rows[i-1].date))&&JSON.stringify(rows.slice(-20).map(r=>r.date))===JSON.stringify(dates);
+ if(!validSpine(coverage)||!validSpine(t.coverage))return fail('COVERAGE_SPINE_MISMATCH');
+ if(!Array.isArray(t.groups))return fail('THEME_GROUPS_MISSING');
+ const ids=new Set();for(const g of t.groups){if(typeof g.id!=='string'||ids.has(g.id))return fail('DUPLICATE_OR_INVALID_THEME_ID');ids.add(g.id);}
+ const window=dates.slice(-6),availableIds=new Set(SUPPLY_CHAIN_FRAMES.flatMap(f=>f[1]));
+ const groups=t.groups.filter(g=>g.node_kind!=='PARENT'&&availableIds.has(g.id)),qualified=[],unavailable=[];
+ const near=(a,b)=>Math.abs(a-b)<=Number.EPSILON*8*Math.max(1,Math.abs(a),Math.abs(b));
+ const byCoverage=new Map(coverage.map(r=>[r.date,r])),byThemeCoverage=new Map(t.coverage.map(r=>[r.date,r]));
+ let evaluated=0;
+ for(const g of groups){
+  let reason=null;const history=new Map(),memberIds=(g.constituents||[]).map(m=>m.stock_id),n=g.mapped_members;
+  if(!Number.isInteger(n)||n<1||memberIds.length!==n||new Set(memberIds).size!==n)reason='MEMBERSHIP_NOT_FIXED';
+  for(const r of g.daily||[]){if(r.date>data.as_of)continue;if(history.has(r.date))reason='DUPLICATE_DATE';history.set(r.date,r);}
+  const rows=window.map(date=>history.get(date));
+  for(let i=0;!reason&&i<rows.length;i++){
+   const r=rows[i],c=byCoverage.get(window[i]),tc=byThemeCoverage.get(window[i]);
+   if(!r){reason='MISSING_SESSION';break;}
+   if(r.members!==n||r.valid_turnover!==n||!Array.isArray(r.missing_ids)||r.missing_ids.length){reason='INCOMPLETE_OR_CHANGED_MEMBERSHIP';break;}
+   if(!finite(r.turnover_ntd)||r.turnover_ntd<0||!finite(r.share_pct)||r.share_pct<0||r.share_pct>100){reason='MISSING_OR_INVALID_VALUE';break;}
+   if(!finite(c?.denominator_ntd)||c.denominator_ntd<=0||!finite(tc?.denominator_ntd)||!near(c.denominator_ntd,tc.denominator_ntd)||c.valid_turnover!==tc.valid_turnover||c.eligible_members!==tc.eligible_members||!near(r.share_pct,r.turnover_ntd/c.denominator_ntd*100)){reason='DENOMINATOR_MISMATCH';break;}
+  }
+  if(reason){unavailable.push({id:g.id,name:g.name,reason});continue;}
+  const today=rows[5],prior=rows.slice(0,5),meanAmount=prior.reduce((s,r)=>s+r.turnover_ntd,0)/5,meanShare=prior.reduce((s,r)=>s+r.share_pct,0)/5;
+  if(!finite(meanAmount)||!finite(meanShare)||meanAmount<=0||meanShare<=0){unavailable.push({id:g.id,name:g.name,reason:'ZERO_OR_INVALID_BASE'});continue;}
+  const turnoverRatio=today.turnover_ntd/meanAmount,shareGrowth=today.share_pct/meanShare-1;
+  if(!finite(turnoverRatio)||!finite(shareGrowth)){unavailable.push({id:g.id,name:g.name,reason:'NONFINITE_RELATIVE_CHANGE'});continue;}
+  evaluated++;
+  const threshold=meanAmount*1.2;
+  if((today.turnover_ntd>threshold||near(today.turnover_ntd,threshold))&&today.share_pct>meanShare&&!near(today.share_pct,meanShare))qualified.push({id:g.id,name:g.name,relative_share_growth:shareGrowth,turnover_ratio:turnoverRatio,today_turnover_ntd:today.turnover_ntd,prior5_mean_turnover_ntd:meanAmount,today_share_pct:today.share_pct,prior5_mean_share_pct:meanShare});
+ }
+ for(const id of availableIds)if(!ids.has(id))unavailable.push({id,name:id,reason:'THEME_MISSING'});
+ qualified.sort((a,b)=>b.relative_share_growth-a.relative_share_growth||(a.id<b.id?-1:a.id>b.id?1:0));
+ return {status:evaluated?(unavailable.length?'PARTIAL':'READY'):'INSUFFICIENT',as_of:data.as_of,window,prior_dates:window.slice(0,5),evaluated,unavailable,qualified,selected:qualified.slice(0,5)};
+}
+export function heatingHtml(data){
+ const r=themeHeating(data),names=r.selected.map(g=>`<a class="heating-name" href="${esc(groupHref('theme',g.id))}">${esc(g.name)}</a>`).join('');
+ const state=r.status==='INSUFFICIENT'?'資料不足，暫無法判定':r.selected.length?(r.status==='PARTIAL'?'部分族群資料不足':''):r.status==='PARTIAL'?'部分族群資料不足；已齊資料者暫無明顯升溫':'暫無明顯升溫族群';
+ return `<section class="theme-heating" aria-labelledby="heatingTitle" data-heating-status="${r.status}"><h3 id="heatingTitle">成交升溫</h3>${names?`<div class="heating-names">${names}</div>`:''}${state?`<p class="heating-status" role="status">${state}</p>`:''}</section>`;
+}
+
 export function supplyChainHtml(data){
  const t=validateThemes(data.themes,data.as_of),byid=new Map(t.groups.map(g=>[g.id,g])),ids=SUPPLY_CHAIN_FRAMES.flatMap(f=>f[1]);if(new Set(ids).size!==ids.length||ids.some(id=>!byid.has(id))||t.groups.filter(g=>g.node_kind!=='PARENT').some(g=>!ids.includes(g.id)))throw Error('供應鏈按鈕映射不完整。');
- return electronicOverviewHtml(data)+`<p class="footnote">大框只供視覺分組；題材各自可點、成分可重疊，不能把同框或跨框成交額相加。以下為已核實成分子集，仍在補齊。</p><div class="supply-chain-frames">${SUPPLY_CHAIN_FRAMES.map(([name,keys])=>`<section class="supply-chain-frame"><h3>${esc(name)}</h3>${groupTiles(keys.map(k=>byid.get(k)),'theme')}</section>`).join('')}</div>`;
+ return heatingHtml(data)+electronicOverviewHtml(data)+`<p class="footnote">大框只供視覺分組；題材各自可點、成分可重疊，不能把同框或跨框成交額相加。以下為已核實成分子集，仍在補齊。</p><div class="supply-chain-frames">${SUPPLY_CHAIN_FRAMES.map(([name,keys])=>`<section class="supply-chain-frame"><h3>${esc(name)}</h3>${groupTiles(keys.map(k=>byid.get(k)),'theme')}</section>`).join('')}</div>`;
 }
 export function groupEvidence(t,g){
  return `<details class="theme-evidence"><summary>納入理由、來源與待確認成分</summary><p>${esc(t.historical_basis)}</p><ul>${g.constituents.map(m=>`<li>${esc(m.stock_id)} ${esc(m.name)} · ${esc(m.role)}${m.evidence_limit?`<p>${esc(m.evidence_limit)}</p>`:''}<ul>${m.sources.map(k=>{const s=t.sources[k];return `<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a> · ${s.published_date?'來源日期 '+esc(s.published_date):'來源未標明發布日'} · 查核 ${esc(s.reviewed_date)}<br>${esc(s.summary)}</li>`;}).join('')}</ul></li>`).join('')}</ul>${g.pending?.length?`<h4>待補證據，未納入統計</h4><ul>${g.pending.map(m=>`<li>${esc(m.stock_id)} ${esc(m.name)}：${esc(m.reason)}</li>`).join('')}</ul>`:''}</details>`;
@@ -643,7 +689,7 @@ export function groupHref(mode,id=null){return '#sectors/'+mode+(id?'/'+encodeUR
 export function groupTiles(groups,mode){
  return `<div class="group-tile-grid">${groups.map(g=>`<a class="group-tile" href="${esc(groupHref(mode,g.id||g.industry))}">${esc(g.name||g.industry)}</a>`).join('')}</div>`;
 }
-export function groupCoverageHtml(data){return `<details class="group-coverage"><summary>統計範圍與每日分母</summary><p>不是交易所全市場：僅本站當日合格普通股且成交金額已知者，不含 ETF。兩圖黃線與占比分母使用完全相同的每日總成交金額；成交額不是淨資金流入。族群金額是成分股票整體成交額，不按該業務營收比例拆分；跨族群可能重疊，不可相加。</p><div class="table-scroll"><table><thead><tr><th>日期</th><th>有效／合格檔數</th><th>總成交額（億元）</th></tr></thead><tbody>${[...data.sectors.coverage].slice(-20).reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${r.valid_turnover}/${r.eligible_members}</td><td>${finite(r.denominator_ntd)?(r.denominator_ntd/1e8).toFixed(2):'缺資料'}</td></tr>`).join('')}</tbody></table></div></details>`;}
+export function groupCoverageHtml(data){return `<details class="group-coverage"><summary>統計範圍與每日分母</summary><p>首頁成交升溫：最新已採用收盤日成交金額至少為前五個交易日平均的 1.2 倍，且占比高於前五日每日占比平均；基準不含當日。依占比相對增幅取前五名，不湊數；成分或任一日資料不足者不判定，零基期不作無限增幅。20% 是初版設計門檻，未經最佳化回測；不是看漲訊號。使用目前已核實題材成分回看歷史，不是歷史時點分類。</p><p>不是交易所全市場：僅本站當日合格普通股且成交金額已知者，不含 ETF。兩圖黃線與占比分母使用完全相同的每日總成交金額；成交額不是淨資金流入。族群金額是成分股票整體成交額，不按該業務營收比例拆分；跨族群可能重疊，不可相加。</p><div class="table-scroll"><table><thead><tr><th>日期</th><th>有效／合格檔數</th><th>總成交額（億元）</th></tr></thead><tbody>${[...data.sectors.coverage].slice(-20).reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${r.valid_turnover}/${r.eligible_members}</td><td>${finite(r.denominator_ntd)?(r.denominator_ntd/1e8).toFixed(2):'缺資料'}</td></tr>`).join('')}</tbody></table></div></details>`;}
 export function groupViewHtml(data,route){
  const mode=route?.mode||'theme',id=route?.id||null,t=validateThemes(data.themes,data.as_of),all=mode==='theme'?t.groups:data.sectors.groups;
  const modes='';
