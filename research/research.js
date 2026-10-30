@@ -182,7 +182,7 @@ export function validateMarket(body,now=new Date()){
   if(body?.schema!=='PUBLIC_MARKET_SUMMARY_V2'||!Array.isArray(body.markets)||body.markets.length!==2||new Set(body.markets.map(r=>r.market)).size!==2)throw dataError();
   const today=taipeiDate(now);
   for(const row of body.markets){
-    const q=currentIndexQuote(row.quote,row.market,body.market_as_of,indicators),r=row.research;
+    const q=row.quote,r=row.research;
     if(!Object.hasOwn(indexNames,row.market)||q?.market!==row.market||q?.kind!=='PRICE_INDEX'||q?.session!=='CLOSE'||r?.basis!=='TOTAL_RETURN_INDEX'||r.as_of!==body.market_as_of)throw dataError();
     if(q.status==='MISSING'){if(q.close!==null||q.date!==null||q.change_points!==null||q.change_ratio!==null)throw dataError();}
     else if(!['AVAILABLE','SAVED_CLOSE'].includes(q.status)||!validDate(q.date)||q.date>today||!Number.isFinite(q.close)||q.close<=0)throw dataError();
@@ -206,22 +206,11 @@ export function validateMarket(body,now=new Date()){
   return body;
 }
 
-export function currentIndexQuote(saved,market,asOf,indicators){
-  // Prefer the already hash-verified daily indicator snapshot for the same day.
-  // The immutable research payload and its historical price quote stay intact.
-  if(!indicators||indicators.as_of!==asOf||!Array.isArray(indicators.metrics))return saved;
-  const m=indicators.metrics.find(x=>x.id===market+'_close');
-  if(!m||m.status!=='AVAILABLE'||m.as_of!==asOf||!finite(m.value)||m.value<=0||(saved.date&&saved.date>asOf))return saved;
-  const c=m.comparisons?.find(x=>x.sessions===1);
-  const previous=c&&validDate(c.baseline_date)&&c.baseline_date<asOf&&finite(c.baseline)&&c.baseline>0&&finite(c.difference)&&Math.abs(m.value-c.baseline-c.difference)<0.011;
-  return {...saved,date:asOf,status:'AVAILABLE',close:m.value,source:'已核對每日指標 · FinMind TaiwanStockPrice',previous_date:previous?c.baseline_date:null,previous_close:previous?c.baseline:null,change_points:previous?c.difference:null,change_ratio:previous?m.value/c.baseline-1:null,reason:'已保存的同日價格指數；非即時行情'};
-}
-
-export function renderMarket(body,compact=false,indicators=null){
+export function renderMarket(body,compact=false){
   if(!body)return empty('大盤摘要目前無法讀取。');
   validateMarket(body);
   return body.markets.map(row=>{
-    const q=currentIndexQuote(row.quote,row.market,body.market_as_of,indicators),r=row.research;
+    const q=row.quote,r=row.research;
     const quoteDate=q.date?`${esc(q.date)} 收盤`:'收盤資料待補';
     const delta=q.change_ratio===null?'前一交易日資料不足':`${signedPoint(q.change_points)} 點（${percent(q.change_ratio)}）`;
     return `<article class="card market-v2-card"><div class="card-head"><h3>${esc(indexNames[row.market])}</h3><span class="pill">價格指數</span></div><p class="public-date">${quoteDate} · 非即時行情</p><div class="market-reading" data-quote-market="${esc(row.market)}">${point(q.close)}<span class="market-unit"> 點</span></div><p class="quote-change">${delta}</p><p class="footnote">來源：${esc(q.source)}；${q.previous_date?`比較 ${esc(q.previous_date)} 收盤。`:esc(q.reason)}</p><div class="research-position"><div class="card-head"><h4>研究位置與回撤</h4><span class="pill">${esc(researchStates[r.status]||'已保存狀態')}</span></div><p class="footnote">研究資料日 ${esc(r.as_of)} · 以下採含股利總報酬指數</p><div class="facts"><div class="fact"><span>自本段起點漲幅</span><strong>${point(r.gain_from_base_pp)}%</strong></div><div class="fact"><span>距本段保存高點</span><strong>${percent(r.drawdown_ratio)}</strong></div></div>${!compact?`<p class="footnote">研究起點 ${esc(r.base_date||'未提供')}；總報酬指數 ${point(r.base_level)} → ${point(r.index_level)}；本段高點 ${point(r.peak_level)}。</p><p class="footnote">${r.drawdown_active?'修正仍在觀察中。':'未標示修正進行中。'}這是既有路徑位置，不能當作下跌機率。</p>`:''}</div></article>`;
@@ -295,7 +284,7 @@ export function renderIndicatorTable(data,{market='TAIEX',group='all',n=1,mode='
   return `<table class="indicator-table"><thead><tr><th>指標／口徑</th><th>資料日 ${esc(data.as_of)}</th><th>${esc(baseTitle)}</th><th>${mode==='sum'?'狀態':'差異／變化'}</th></tr></thead><tbody>${rows.map(m=>`<tr><td data-label="指標"><strong>${esc(m.label)}</strong><span class="indicator-unit">${esc(m.unit)}${m.sample_count!==undefined?` · 固定樣本 ${m.sample_count}/${m.target_universe_count} 家`:''}</span><details><summary>來源與規則</summary><p>${esc(m.source)}<br>${esc(m.note)}</p></details></td><td data-label="當日"><strong>${fmt(m.value)}</strong>${m.value===null?`<small>當日待資料${m.last_available_date?`；最近可用 ${esc(m.last_available_date)}：${fmt(m.last_available_value)} ${esc(m.unit)}`:''}</small>`:''}</td><td data-label="${esc(baseTitle)}">${fmt(mode==='sum'?m.sum:m.baseline)}${mode!=='point'&&(mode==='sum'?m.sum:m.baseline)===null?'<small>不適用或完整窗口不足</small>':''}</td><td data-label="變化"><span class="indicator-state ${m.direction==='資料不足'?'pending':''}">${esc(m.direction)}</span>${mode==='sum'?'':`<strong class="indicator-change">${sign(m.delta)} ${esc(m.unit)}</strong>`}</td></tr>`).join('')}</tbody></table>`;
 }
 
-async function mountMarketIndicators(marketBody){
+async function mountMarketIndicators(){
   const host=document.getElementById('marketIndicators');if(!host)return;
   try{
     const base=new URL('../research-showcases/market-indicators/',location.href);
@@ -303,7 +292,6 @@ async function mountMarketIndicators(marketBody){
     if(manifest.schema!=='MARKET_INDICATORS_MANIFEST_V1'||!validDate(manifest.as_of)||manifest.ETF_holdings_included!==false)throw Error();
     const dr=await fetch(new URL('data.json',base),{cache:'no-cache'});if(!dr.ok)throw Error();const bytes=await dr.arrayBuffer();await verifyResourceBytes(bytes,manifest.files['data.json']);
     const data=validateIndicators(JSON.parse(new TextDecoder('utf8',{fatal:true}).decode(bytes)));if(data.as_of!==manifest.as_of)throw Error();
-    if(marketBody&&data.as_of===marketBody.market_as_of){document.getElementById('marketCards').innerHTML=renderMarket(marketBody,false,data);document.getElementById('homeMarketSummary').innerHTML=renderMarket(marketBody,true,data);}
     host.innerHTML=`<div class="section-heading"><div><div class="eyebrow">MARKET DASHBOARD</div><h3>大盤指標與變化</h3></div><span class="chip">描述性狀態・試行介面</span></div><p class="indicator-intro">先看資料，再看變化。增加／減少只描述數值方向，不等於多空訊號或買賣建議。</p><p class="notice">指標比較快照 <strong>${esc(data.as_of)}</strong> · ${data.metrics.filter(m=>m.status==='AVAILABLE').length}/${data.metrics.length} 項當日可用（含兩市場）。${data.automatic_refresh_installed?'已接上當日研究發布後刷新；設定已安裝，實際更新以此資料日為準。':'此比較快照尚未接上每日自動刷新。'}缺資料保留「—」，不以舊值補今日。</p><div class="indicator-controls"><label>市場<select id="indicatorMarket"><option value="TAIEX">上市／加權</option><option value="TPEx">上櫃／櫃買</option></select></label><label>指標<select id="indicatorGroup"><option value="all">全部指標</option><option value="price">價格・量能・趨勢</option><option value="breadth">市場廣度</option><option value="credit">融資・待接來源</option></select></label><label>比較期間<select id="indicatorPeriod"><option value="1">昨日（1交易日前）</option><option value="5">5交易日前</option><option value="10">10交易日前</option><option value="20">20交易日前</option></select></label><label>比較方式<select id="indicatorMode"><option value="point">指定交易日：當日 − 基準日</option><option value="prior_mean">量能：對前 N 日均值</option></select></label></div><p id="indicatorBasis" class="footnote"></p><div id="indicatorTable" class="table-scroll"></div><div class="indicator-contracts"><details><summary>哪些可以當成大盤燈號？</summary><p>既有市場 State Engine 的上升／局部修正與回撤位置保留於下方。這一版先呈現資料與方向，沒有新增未回測的紅綠綜合分數。</p><p>個股分點集中、相對大盤／產業族群、個股火藥桶的母體與規則不同，不能直接套在指數上。目前未找到可驗證的大盤專用火藥桶規則。</p><p>法人與期貨資料保留本地追蹤，不放入本頁公開摘要，也未納入已採用的大盤機率。</p></details></div><section class="market-outlook"><h3>大盤綜合機率</h3><p class="footnote">價格指數未來交易日報酬；新模型研究中。下方既有 H20／H60 是總報酬、特定觸發條件且排除平盤的研究估計，不能直接填入這裡。</p><div class="outlook-grid">${[5,10,20].map(n=>`<article class="outlook-card"><h4>未來 ${n} 個交易日</h4><span class="indicator-state pending">待建立並驗證</span><dl><div><dt>上漲</dt><dd>—</dd></div><div><dt>下跌</dt><dd>—</dd></div><div><dt>平盤</dt><dd>—</dd></div></dl></article>`).join('')}</div></section>`;
     const paint=()=>{const opts={market:document.getElementById('indicatorMarket').value,group:document.getElementById('indicatorGroup').value,n:Number(document.getElementById('indicatorPeriod').value),mode:document.getElementById('indicatorMode').value};document.getElementById('indicatorTable').innerHTML=renderIndicatorTable(data,opts);document.getElementById('indicatorBasis').textContent=opts.mode==='point'?`基準日 ${data.baseline_dates[opts.n]} → ${data.as_of}；使用已核實交易日，不是曆日或最近 N 列。`:`均值不含當日，適用量能；任一應有交易日缺資料就不計算。`;};
     for(const id of ['indicatorMarket','indicatorGroup','indicatorPeriod','indicatorMode'])document.getElementById(id).addEventListener('change',paint);paint();
@@ -843,7 +831,7 @@ function init(){
       buildReady=true;paintFilter();applyRoute({reloadDetail:true});
     }catch(error){buildFailed=true;byId('loadStatus').textContent=error.message;byId('loadStatus').classList.add('error');byId('rankingRows').innerHTML=empty('公開保存資料尚未就緒。');byId('homeMarketSummary').innerHTML=empty('大盤摘要尚未就緒。');byId('marketCards').innerHTML=empty('大盤摘要尚未就緒。');byId('detailStatus').textContent='此發布版本尚未通過核對，個股明細暫停顯示。';paintFilter();}
   }
-  mountMarketIndicators(market);
+  mountMarketIndicators();
   loadBuild();
 }
 if(typeof document!=='undefined'&&document.getElementById('stockSearch'))init();
