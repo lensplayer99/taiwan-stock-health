@@ -1,3 +1,4 @@
+export function isHttpsSource(value){try{const parsed=new URL(value);return parsed.protocol==='https:'&&!parsed.username&&!parsed.password;}catch{return false;}}
 // Public, saved research presentation. All values are read from the same published build.
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const empty=message=>`<div class="empty">${esc(message)}</div>`;
@@ -614,7 +615,7 @@ export function electronicOverview(data){
  if(finite(den)&&den>0&&Math.abs(sum-den)>Math.max(1,den*1e-9))throw Error('電子／非電子分組與同日分母不符。');
  return {date,valid:c?.valid_turnover??null,eligible:c?.eligible_members??null,unresolved_names:names,...Object.fromEntries(Object.entries(totals).map(([k,v])=>[k,finite(den)&&den>0?v/den*100:null]))};
 }
-export function electronicOverviewHtml(data){const o=electronicOverview(data),pct=v=>finite(v)?v.toFixed(2)+'%':'缺資料';return `<section class="electronic-overview" aria-label="電子與非電子成交占比"><div><span>電子</span><strong>${pct(o.electronic)}</strong></div><div><span>非電子</span><strong>${pct(o.non_electronic)}</strong></div></section><p class="footnote overview-caption">${esc(o.date)} · 本站統計範圍成交占比，有效 ${o.valid??'—'}/${o.eligible??'—'} 檔；未歸組 ${pct(o.unresolved)}，未硬歸入任一邊。</p><details class="overview-method"><summary>分群依據與覆蓋</summary><p>電子採證交所電子8類口徑，套用已保存的官方產業名稱；非電子採已明定的其他產業。${esc(o.unresolved_names.join('、'))} 暫留未歸組。三者使用同日同分母，沒有因題材重疊重複加總，也未將已分類者重新正規化成100%。本站包含合格上市櫃普通股，不是交易所全市場。</p><p><a href="https://investoredu.twse.com.tw/FileSystem/eBook/15_%E7%94%A2%E6%A5%AD%E5%88%86%E9%A1%9E%E8%AA%BF%E6%95%B4.pdf" target="_blank" rel="noopener noreferrer">證交所電子8類說明（2007分類調整）</a>；<a href="https://eshop.twse.com.tw/zh/product/detail/000000006f6a5e340170323707410063" target="_blank" rel="noopener noreferrer">現行指數資料欄位對照</a>。查核 2026-10-30；不是直接複製電子指數成交占比。</p></details>`;}
+export function electronicOverviewHtml(data){const o=electronicOverview(data),pct=v=>finite(v)?v.toFixed(2)+'%':'缺資料';return `<section class="electronic-overview" aria-label="電子與非電子成交占比"><div><span>電子</span><strong>${pct(o.electronic)}</strong></div><div><span>非電子</span><strong>${pct(o.non_electronic)}</strong></div></section><p class="footnote overview-caption">${esc(o.date)} · 本站統計範圍成交占比，有效 ${o.valid??'—'}/${o.eligible??'—'} 檔；未歸組 ${pct(o.unresolved)}，未硬歸入任一邊。</p><details class="overview-method"><summary>分群依據與覆蓋</summary><p>電子採證交所電子8類口徑，套用已保存的官方產業名稱；非電子採已明定的其他產業。${esc(o.unresolved_names.join('、'))} 暫留未歸組。三者使用同日同分母，沒有因題材重疊重複加總，也未將已分類者重新正規化成100%。本站包含合格上市櫃普通股，不是交易所全市場。</p><p><span>證交所電子8類說明（2007分類調整）</span>；<span>現行指數資料欄位對照</span>。查核 2026-10-30；不是直接複製電子指數成交占比。</p></details>`;}
 export const SUPPLY_CHAIN_FRAMES=[
  ['半導體',['memory_mfg','memory_ctrl','osat','ic_products','ip_asic','equipment','foundry','silicon','semi_consumables','fab_facilities','test_interface']],
  ['PCB 供應鏈',['pcb_boards','ccl','foil_glass','abf','pcb_drills']],
@@ -721,7 +722,7 @@ export function validateThemes(d,day){
   const ids=new Set();
   for(const g of d.groups){
     if(ids.has(g.id)||!Array.isArray(g.constituents)||new Set(g.constituents.map(m=>m.stock_id)).size!==g.constituents.length||g.constituents.length!==g.mapped_members)throw Error('題材成分重複或不完整。');ids.add(g.id);
-    for(const m of g.constituents)if(!validId(m.stock_id)||!m.sources.length||m.sources.some(k=>!d.sources[k]||!/^https:\/\//.test(d.sources[k].url)))throw Error('題材來源不完整。');
+    for(const m of g.constituents)if(!validId(m.stock_id)||!m.sources.length||m.sources.some(k=>!d.sources[k]||!isHttpsSource(d.sources[k].url)))throw Error('題材來源不完整。');
     for(const n of [1,5,10,20]){const c=g.comparisons[n];if(!c||c.expected_days!==n||c.valid_days<0||c.valid_days>n)throw Error('題材比較窗口錯誤。');}
   }
   return d;
