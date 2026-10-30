@@ -31,6 +31,7 @@ const badge=state=>`<span class="signal-badge ${state.toLowerCase()}">${state===
 const validId=id=>typeof id==='string'&&/^[A-Za-z0-9]+$/.test(id);
 export const validDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value+'T00:00:00Z'))&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
 export function parseRoute(hash=''){
+  if(hash.startsWith('#sectors/')){const group=parseGroupRoute(hash);if(group)return {page:'sectors',id:null,hash,valid:true,group};}
   if(hash==='#firebarrel'||hash==='#home/overheat')return {page:'home',id:null,hash:'#home/overheat',valid:true,heat:true};
   if(!hash||hash==='#')return {page:'market',id:null,hash:'#market',valid:true};
   if(['#home','#market','#stocks','#predictions','#composite','#sectors','#firebarrel'].includes(hash))return {page:hash.slice(1),id:null,hash,valid:true};
@@ -552,55 +553,121 @@ export function sectorSorted(data,n){
 
 export function groupDailyRows(data,group){
  const dates=data.dates.slice(-20);
- if(dates.some(d=>!validDate(d))||new Set(dates).size!==dates.length||dates.some((d,i)=>i&&d<=dates[i-1])||dates.at(-1)!==data.as_of)throw Error('族群交易日窗口不符。');
- const history=new Map();
- for(const row of group.daily||[]){if(history.has(row.date))throw Error('族群日期重複。');history.set(row.date,row);}
+ if(dates.some(d=>!validDate(d))||new Set(dates).size!==dates.length||dates.some((d,i)=>i&&d<=dates[i-1])||dates.at(-1)!==data.as_of)throw Error('族群交易日窗不符。');
+ const history=new Map();for(const row of group.daily||[]){if(history.has(row.date))throw Error('族群日期重複。');history.set(row.date,row);}
  const coverage=new Map((data.sectors?.coverage||[]).map(r=>[r.date,r]));
- return [...dates].reverse().map(date=>{const r=history.get(date),c=coverage.get(date);return {date,share_pct:finite(r?.share_pct)&&r.share_pct>=0&&r.share_pct<=100?r.share_pct:null,turnover_ntd:finite(r?.turnover_ntd)&&r.turnover_ntd>=0?r.turnover_ntd:null,valid_turnover:r?.valid_turnover??null,members:r?.members??null,market_valid:c?.valid_turnover??null,market_members:c?.eligible_members??null};});
+ return [...dates].reverse().map(date=>{const r=history.get(date),c=coverage.get(date);return {date,share_pct:finite(r?.share_pct)&&r.share_pct>=0&&r.share_pct<=100?r.share_pct:null,turnover_ntd:finite(r?.turnover_ntd)&&r.turnover_ntd>=0?r.turnover_ntd:null,market_turnover_ntd:finite(c?.denominator_ntd)&&c.denominator_ntd>=0?c.denominator_ntd:null,valid_turnover:r?.valid_turnover??null,members:r?.members??null,missing_ids:r?.missing_ids||[],market_valid:c?.valid_turnover??null,market_members:c?.eligible_members??null};});
 }
-export function groupShareSorted(groups){
- return [...groups].sort((a,b)=>{const x=a.share_pct,y=b.share_pct;return (finite(x)?0:1)-(finite(y)?0:1)||(finite(x)&&finite(y)?y-x:0)||String(a.name||a.industry).localeCompare(String(b.name||b.industry),'zh-TW');});
-}
+export function groupShareSorted(groups){return [...groups].sort((a,b)=>String(a.name||a.industry).localeCompare(String(b.name||b.industry),'zh-TW'));}
 export function shareReadout(row,metric='share_pct'){
- const amount=metric==='turnover_ntd',value=row[metric];
- return `${row.date}｜${amount?'成交金額':'成交占比'} ${finite(value)?(amount?(value/1e8).toFixed(2)+' 億元':value.toFixed(4)+'%'):'缺資料（留白）'}｜成分成交有效 ${row.valid_turnover??'—'}/${row.members??'—'}｜市場成交有效 ${row.market_valid??'—'}/${row.market_members??'—'}`;
+ const amount=metric==='turnover_ntd',value=row[metric],market=row.market_turnover_ntd;
+ return `${row.date}｜族群${amount?'成交金額':'成交占比'} ${finite(value)?(amount?(value/1e8).toFixed(2)+' 億元':value.toFixed(4)+'%'):'缺資料（留空）'}｜本站範圍總成交額 ${finite(market)?(market/1e8).toFixed(2)+' 億元':'缺資料'}｜實際占比 ${finite(row.share_pct)?row.share_pct.toFixed(4)+'%':'缺資料'}｜族群有效 ${row.valid_turnover??'—'}/${row.members??'—'}；本站範圍有效 ${row.market_valid??'—'}/${row.market_members??'—'}`;
+}
+export function marketLineSvg(rows,ceiling,field='market_turnover_ntd',label='本站同一統計範圍每日總成交金額'){
+ if(!finite(ceiling)||ceiling<=0)throw Error('市場金額軸無效。');
+ let out='',segment=[];const flush=()=>{if(segment.length)out+=`<polyline data-series="${field}" points="${segment.join(' ')}" fill="none" stroke="#f2ce63" stroke-width="2.4" vector-effect="non-scaling-stroke"/>`;segment=[];};
+ rows.forEach((r,i)=>{if(!finite(r[field])){flush();return;}const x=(i+.5)*1000/rows.length,y=121*(1-r[field]/ceiling);segment.push(`${x.toFixed(3)},${y.toFixed(3)}`);out+=`<circle data-market-date="${r.date}" cx="${x.toFixed(3)}" cy="${y.toFixed(3)}" r="3" fill="#f2ce63"/>`;});flush();
+ return `<svg class="group-market-line" viewBox="0 0 1000 121" preserveAspectRatio="none" role="img" aria-label="${esc(label)}黃線，右軸億元">${out}</svg>`;
 }
 export function dailyShareChart(data,group,metric='share_pct'){
- if(!['share_pct','turnover_ntd'].includes(metric))throw Error('未知族群圖表單位。');
- const amount=metric==='turnover_ntd',rows=groupDailyRows(data,group),values=rows.filter(r=>finite(r[metric])).map(r=>r[metric]),max=values.length?Math.max(...values):0,ceiling=max>0?max*1.1:(amount?1e8:1);
- const title=group.name||group.industry,latest=rows[0],label=amount?'每日成交金額':'每日成交占比',axis=amount?(ceiling/1e8).toFixed(2)+' 億元':ceiling.toFixed(4)+'%';
- return `<figure class="daily-share-chart" data-group-metric="${metric}" aria-label="${esc(title)}近20交易日${label}"><figcaption><strong>${label}</strong><span>${amount?'自身交易活絡':'相對市場關注'} · 新 → 舊</span></figcaption><div class="share-axis"><span>本圖上限 ${axis}</span><span>底線 0${amount?' 億元':'%'}</span></div><div class="share-bars" style="--bar-count:${rows.length||20}">${rows.map((r,i)=>{const known=finite(r[metric]),text=shareReadout(r,metric);return `<button type="button" class="share-bar-hit${i===0?' latest':''}${known?'':' missing'}" data-share-i="${i}" data-share-readout="${esc(text)}" aria-label="${esc(text)}" title="${esc(text)}" aria-pressed="${i===0}"><span class="share-column"><span class="share-fill" style="height:${known?(r[metric]/ceiling*100).toFixed(6):0}%"></span>${known?'':'<span class="share-missing">—</span>'}${known&&r[metric]===0?'<span class="share-zero"></span>':''}</span><span class="share-date">${esc(r.date.slice(5).replace('-','/'))}</span></button>`;}).join('')}</div><p class="share-readout" role="status">${latest?esc(shareReadout(latest,metric)):'沒有可用交易日'}</p><p class="footnote">${rows.length?esc(rows[0].date)+' → '+esc(rows.at(-1).date):'日期待補'} · 有值 ${values.length}/20 日${rows.length<20?'；保存交易日不足20日':''}。金色為最新日；缺值留空。各圖縱軸獨立，請按${amount?'金額':'百分比'}比較。</p></figure>`;
+ if(!['share_pct','turnover_ntd'].includes(metric))throw Error('未知族群圖表值。');
+ const amount=metric==='turnover_ntd',rows=groupDailyRows(data,group),values=rows.filter(r=>finite(r[metric])).map(r=>r[metric]),market=rows.filter(r=>finite(r.market_turnover_ntd)).map(r=>r.market_turnover_ntd);
+ const ceiling=Math.max(0,...values)*1.1||(amount?1e8:1),marketCeiling=Math.max(0,...market)*1.1||1e8;
+ const title=group.name||group.industry,label=amount?'族群每日成交金額':'族群每日成交占比',axis=amount?(ceiling/1e8).toFixed(2)+' 億元':ceiling.toFixed(4)+'%';
+ return `<figure class="daily-share-chart" data-group-metric="${metric}" aria-label="${esc(title)}近20交易日${label}與本站總成交額"><figcaption><strong>${label}</strong><span>新 ← 舊</span></figcaption><p class="group-chart-legend"><span class="legend-bar">藍柱：${amount?'族群金額':'族群占比'}</span><span class="legend-market">黃線：本站範圍總成交額</span></p><div class="share-axis"><span>左軸：族群 ${amount?'億元':'%'}<br>0 – ${axis}</span><span>右軸：本站範圍 億元<br>0 – ${(marketCeiling/1e8).toFixed(2)} 億元</span></div><div class="share-bars" style="--bar-count:${rows.length||20}">${rows.map((r,i)=>{const known=finite(r[metric]),text=shareReadout(r,metric);return `<button type="button" class="share-bar-hit${i===0?' latest':''}${known?'':' missing'}" data-share-i="${i}" data-share-readout="${esc(text)}" aria-label="${esc(text)}" title="${esc(text)}" aria-pressed="${i===0}"><span class="share-column"><span class="share-fill" style="height:${known?(r[metric]/ceiling*100).toFixed(6):0}%"></span>${known?'':'<span class="share-missing">—</span>'}${known&&r[metric]===0?'<span class="share-zero"></span>':''}</span><span class="share-date">${esc(r.date.slice(5).replace('-','/'))}</span></button>`;}).join('')}${marketLineSvg(rows,marketCeiling)}</div><p class="share-readout" role="status">${rows[0]?esc(shareReadout(rows[0],metric)):'沒有可用交易日'}</p><p class="footnote">${rows.length?esc(rows[0].date)+' ← '+esc(rows.at(-1).date):''} · 族群有效 ${values.length}/20 日，市場線 ${market.length}/20 日${rows.length<20?'；保存交易日不足20日':''}。缺日留空／斷線，不填0。左右軸獨立縮放，柱線高度不代表比例，實際占比請看日期讀值。</p></figure>`;
 }
 export function groupMembersHtml(group,theme=false){
  const members=group.constituents||[];
- const list=members.length?`<div class="group-members">${members.map(m=>`<a href="#stock/${esc(m.stock_id)}" title="${esc(m.role||m.market||'')}"><span>${esc(m.stock_id)}</span> ${esc(m.name||'名稱未提供')}</a>`).join('')}</div>`:empty('成分名單未接入，沒有推定成員。');
- return `<section class="group-constituents" aria-label="${esc(group.name||group.industry)}成分股"><h4>${theme?'已核實成分':'當日合格成分'} · ${members.length} 檔</h4>${list}</section>`;
+ return `<section class="group-constituents" aria-label="${esc(group.name||group.industry)}成分股"><h4>${theme?'目前已核實成分':'當日合格成分'} · ${members.length} 檔</h4>${members.length?`<div class="group-members">${members.map(m=>`<a href="#stock/${esc(m.stock_id)}" title="${esc(m.role||m.market||'')}"><span>${esc(m.stock_id)}</span> ${esc(m.name||'名稱未提供')}</a>`).join('')}</div>`:empty('尚無合格成分，不補造名單。')}</section>`;
 }
 export function groupCard(data,group,theme=false,details=''){
- const name=group.name||group.industry;
- return `<article class="rank-card sector-card group-daily-card"><header><div><h4>${esc(name)}</h4><small>最新資料日 ${esc(data.as_of)}</small></div><div class="group-current"><strong>${finite(group.share_pct)?group.share_pct.toFixed(4)+'%':'缺資料'}</strong><small>最新成交占比</small></div></header>${groupMembersHtml(group,theme)}${dailyShareChart(data,group,'turnover_ntd')}${dailyShareChart(data,group,'share_pct')}<p class="footnote">當日成分成交資料 ${group.valid_turnover??'—'}/${group.members??'—'} 檔${theme?`；此為已核實子集，候選待補 ${group.pending?.length??0} 檔，不是完整題材指數。`:'；成分列為最新日名單，歷史柱使用各日當時資格與分類。'}</p>${details}</article>`;
+ const name=group.name||group.industry,latest=groupDailyRows(data,group)[0];
+ return `<article class="rank-card sector-card group-daily-card"><header><div><h4>${esc(name)}</h4><small>資料日 ${esc(data.as_of)}${theme?' · 分類核對 '+esc(data.themes.reviewed_date):''}</small></div><div class="group-current"><strong>${finite(group.share_pct)?group.share_pct.toFixed(4)+'%':'缺資料'}</strong><small>最新成交占比</small></div></header>${theme?`<p class="notice">${esc(group.definition)}<br>已核實子集，成分尚未完整${group.mapped_members===1?'；目前只有一檔，不能代表整個族群熱度':''}。${group.node_kind==='PARENT'?'本群是子群成分聯集，同一股票只計一次。':''}</p>`:''}${dailyShareChart(data,group,'share_pct')}${dailyShareChart(data,group,'turnover_ntd')}<p class="footnote">當日族群成交額有效 ${group.valid_turnover??'—'}/${group.members??'—'} 檔${theme?`；核實名單 ${group.mapped_members} 檔，當日缺資料或不在合格池：${latest?.missing_ids?.length?esc(latest.missing_ids.join('、')):'無'}。`:'。'}${theme?'各族群可重疊，不可合計為100%；現在分類回看歷史，非當時分類或 PIT 回測。':'歷史圖使用每日當時合格池及分類；成分為最新日。'}</p><div class="member-chart-host">${memberChartsHtml(data,group,0)}</div>${details}</article>`;
 }
-export function sectorCards(data){return groupShareSorted(data.sectors.groups).map(g=>groupCard(data,g)).join('');}
-export function themeCards(data){
- const t=validateThemes(data.themes,data.as_of);
- return groupShareSorted(t.groups).map(g=>{
-  const details=`<details class="theme-evidence"><summary>定義、來源與待確認例外</summary><p>${esc(g.definition)}</p><p>分類核對 ${esc(t.reviewed_date)}；成交資料 ${esc(t.as_of)}。${esc(t.historical_basis)}</p><ul>${g.constituents.map(m=>`<li>${esc(m.stock_id)} ${esc(m.name)} · ${esc(m.role)} · ${m.relation_tier==='RELATED'?'相關業務':'核心產品關聯'}${m.evidence_limit?`<p>${esc(m.evidence_limit)}</p>`:''}<ul>${m.sources.map(k=>{const s=t.sources[k];return `<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a> · ${s.published_date?'來源日 '+esc(s.published_date):'來源未標明發布日'}<br>${esc(s.summary)}</li>`;}).join('')}</ul></li>`).join('')}</ul>${g.pending.length?`<h4>待補證據，未納入統計</h4><ul>${g.pending.map(m=>`<li>${esc(m.stock_id)} ${esc(m.name)}：${esc(m.reason)}</li>`).join('')}</ul>`:''}</details>`;
-  return groupCard(data,g,true,details);
- }).join('');
+export function memberDailyRows(data,group,sid){
+ const source=data.themes?.member_turnover,dates=source?.dates||[],values=source?.values?.[sid]||[];
+ if(source&&(source.schema!=='THEME_MEMBER_TURNOVER_V1'||source.unit!=='NTD'||JSON.stringify(dates)!==JSON.stringify(data.dates)||new Set(dates).size!==dates.length||dates.some((d,i)=>!validDate(d)||(i&&d<=dates[i-1]))||values.length&&values.length!==dates.length))throw Error('成分成交額日期或單位不符。');
+ const byDate=new Map(dates.map((d,i)=>[d,values[i]]));
+ return groupDailyRows(data,group).map(r=>({date:r.date,turnover_ntd:finite(byDate.get(r.date))&&byDate.get(r.date)>=0?byDate.get(r.date):null,group_turnover_ntd:r.turnover_ntd,group_valid:r.valid_turnover,group_members:r.members}));
 }
+export function groupMemberSorted(data,group){
+ const members=group.constituents||[];if(new Set(members.map(m=>m.stock_id)).size!==members.length)throw Error('成分股重複。');
+ return members.map(m=>({...m,latest_turnover_ntd:memberDailyRows(data,group,m.stock_id)[0]?.turnover_ntd??null})).sort((a,b)=>finite(a.latest_turnover_ntd)!==finite(b.latest_turnover_ntd)?(finite(a.latest_turnover_ntd)?-1:1):(finite(a.latest_turnover_ntd)?b.latest_turnover_ntd-a.latest_turnover_ntd:0)||a.stock_id.localeCompare(b.stock_id));
+}
+export function memberReadout(r,m,group){return `${r.date}｜${m.stock_id} ${m.name} ${finite(r.turnover_ntd)?(r.turnover_ntd/1e8).toFixed(2)+' 億元':'缺資料（留空）'}｜${group.name||group.industry}總成交額 ${finite(r.group_turnover_ntd)?(r.group_turnover_ntd/1e8).toFixed(2)+' 億元':'缺資料'}｜族群有效 ${r.group_valid??'—'}/${r.group_members??'—'}`;}
+export function memberChart(data,group,m){
+ const rows=memberDailyRows(data,group,m.stock_id),values=rows.filter(r=>finite(r.turnover_ntd)),lines=rows.filter(r=>finite(r.group_turnover_ntd)),ceiling=Math.max(0,...values.map(r=>r.turnover_ntd))*1.1||1e8,lineCeiling=Math.max(0,...lines.map(r=>r.group_turnover_ntd))*1.1||1e8;
+ return `<figure class="daily-share-chart member-turnover-chart" data-member-id="${esc(m.stock_id)}"><figcaption><a href="#stock/${esc(m.stock_id)}">${esc(m.stock_id)} ${esc(m.name)}</a><span>${esc(data.as_of)} ${finite(rows[0]?.turnover_ntd)?(rows[0].turnover_ntd/1e8).toFixed(2)+' 億元':'缺資料'}</span></figcaption><p class="group-chart-legend"><span class="legend-bar">藍柱：這檔股票成交額</span><span class="legend-market">黃線：${esc(group.name||group.industry)}總成交額</span></p><div class="share-axis"><span>左軸：個股 億元<br>0 – ${(ceiling/1e8).toFixed(2)} 億元</span><span>右軸：族群 億元<br>0 – ${(lineCeiling/1e8).toFixed(2)} 億元</span></div><div class="share-bars" style="--bar-count:${rows.length||20}">${rows.map((r,i)=>{const text=memberReadout(r,m,group),known=finite(r.turnover_ntd);return `<button type="button" class="share-bar-hit${i===0?' latest':''}${known?'':' missing'}" data-share-i="${i}" data-share-readout="${esc(text)}" aria-label="${esc(text)}" title="${esc(text)}" aria-pressed="${i===0}"><span class="share-column"><span class="share-fill" style="height:${known?(r.turnover_ntd/ceiling*100).toFixed(6):0}%"></span>${known?'':'<span class="share-missing">—</span>'}${known&&r.turnover_ntd===0?'<span class="share-zero"></span>':''}</span><span class="share-date">${esc(r.date.slice(5).replace('-','/'))}</span></button>`;}).join('')}${marketLineSvg(rows,lineCeiling,'group_turnover_ntd',(group.name||group.industry)+'每日總成交金額')}</div><p class="share-readout" role="status">${esc(memberReadout(rows[0],m,group))}</p><p class="footnote">新 ← 舊 · 個股 ${values.length}/20 日，族群線 ${lines.length}/20 日。黃線是本族群去重成分總額，不是市場或股價；兩軸獨立，缺日留空。</p></figure>`;
+}
+export function memberChartsHtml(data,group,page=0){
+ const all=groupMemberSorted(data,group),size=8,pages=Math.max(1,Math.ceil(all.length/size)),p=Math.max(0,Math.min(pages-1,Math.trunc(page)||0)),part=all.slice(p*size,(p+1)*size);
+ return `<section class="group-member-charts" data-member-page="${p}" aria-label="成分股20日成交圖"><h4>成分股 · ${all.length} 檔</h4><p class="footnote">依 ${esc(data.as_of)} 成交金額高至低，缺值排後。顯示 ${all.length?p*size+1:0}–${Math.min((p+1)*size,all.length)}／${all.length} 檔${pages>1?'，可換頁看全部':''}；點股名開個股查詢。</p>${part.map(m=>memberChart(data,group,m)).join('')}${pages>1?`<nav class="member-pagination" aria-label="成分股圖表分頁"><button type="button" data-member-page-go="${p-1}"${p===0?' disabled':''}>上一頁</button><span>${p+1}／${pages} 頁</span><button type="button" data-member-page-go="${p+1}"${p===pages-1?' disabled':''}>下一頁</button></nav>`:''}${all.length?'':empty('尚無核實成分。')}</section>`;
+}
+export const ELECTRONIC_INDUSTRIES=['半導體業','電腦及週邊設備業','光電業','通信網路業','電子零組件業','電子通路業','資訊服務業','其他電子業'];
+export const NON_ELECTRONIC_INDUSTRIES=['化學工業','塑膠工業','居家生活','建材營造','文化創意業','橡膠工業','水泥工業','汽車工業','油電燃氣業','玻璃陶瓷','生技醫療業','紡織纖維','航運業','觀光餐旅','貿易百貨','農業科技業','造紙工業','運動休閒','金融保險','鋼鐵工業','電器電纜','電機機械','食品工業'];
+export function electronicOverview(data){
+ const date=data.as_of,c=(data.sectors.coverage||[]).find(c=>c.date===date),den=c?.denominator_ntd,totals={electronic:0,non_electronic:0,unresolved:0},names=[],seen=new Set();let sum=0;
+ for(const g of data.sectors.groups){if(seen.has(g.industry))throw Error('官方產業重複。');seen.add(g.industry);const r=(g.daily||[]).find(r=>r.date===date);if(!r)throw Error('產業資料日未對齊。');const value=r.turnover_ntd;
+  const bucket=ELECTRONIC_INDUSTRIES.includes(g.industry)?'electronic':NON_ELECTRONIC_INDUSTRIES.includes(g.industry)?'non_electronic':'unresolved';
+  if(bucket==='unresolved')names.push(g.industry);if(finite(value)&&value>=0){totals[bucket]+=value;sum+=value;}else if(r.valid_turnover>0)throw Error('產業金額與有效數不一致。');
+ }
+ if(finite(den)&&den>0&&Math.abs(sum-den)>Math.max(1,den*1e-9))throw Error('電子／非電子分組與同日分母不符。');
+ return {date,valid:c?.valid_turnover??null,eligible:c?.eligible_members??null,unresolved_names:names,...Object.fromEntries(Object.entries(totals).map(([k,v])=>[k,finite(den)&&den>0?v/den*100:null]))};
+}
+export function electronicOverviewHtml(data){const o=electronicOverview(data),pct=v=>finite(v)?v.toFixed(2)+'%':'缺資料';return `<section class="electronic-overview" aria-label="電子與非電子成交占比"><div><span>電子</span><strong>${pct(o.electronic)}</strong></div><div><span>非電子</span><strong>${pct(o.non_electronic)}</strong></div></section><p class="footnote overview-caption">${esc(o.date)} · 本站統計範圍成交占比，有效 ${o.valid??'—'}/${o.eligible??'—'} 檔；未歸組 ${pct(o.unresolved)}，未硬歸入任一邊。</p><details class="overview-method"><summary>分群依據與覆蓋</summary><p>電子採證交所電子8類口徑，套用已保存的官方產業名稱；非電子採已明定的其他產業。${esc(o.unresolved_names.join('、'))} 暫留未歸組。三者使用同日同分母，沒有因題材重疊重複加總，也未將已分類者重新正規化成100%。本站包含合格上市櫃普通股，不是交易所全市場。</p><p><a href="https://investoredu.twse.com.tw/FileSystem/eBook/15_%E7%94%A2%E6%A5%AD%E5%88%86%E9%A1%9E%E8%AA%BF%E6%95%B4.pdf" target="_blank" rel="noopener noreferrer">證交所電子8類說明（2007分類調整）</a>；<a href="https://eshop.twse.com.tw/zh/product/detail/000000006f6a5e340170323707410063" target="_blank" rel="noopener noreferrer">現行指數資料欄位對照</a>。查核 2026-10-30；不是直接複製電子指數成交占比。</p></details>`;}
+export const SUPPLY_CHAIN_FRAMES=[
+ ['半導體',['memory_mfg','memory_ctrl','osat','ic_products','ip_asic','equipment','foundry','silicon','semi_consumables','fab_facilities','test_interface']],
+ ['PCB 供應鏈',['pcb_boards','ccl','foil_glass','abf','pcb_drills']],
+ ['光通訊與光互連',['photonics','silicon_photonics','cpo']],
+ ['運算與電子系統',['ai_server','cooling','bbu','network','power','connectors','passive','ipc','leo']],
+ ['電力與自動化',['heavy_electric','robotics','energy_storage']],
+ ['化工與材料',['specialty_chem','plastic_resins','petro_base']],
+ ['國防與資安',['defense_air','drones','cybersecurity']],
+ ['航運',['container_shipping','bulk_shipping']],
+ ['金融',['finance_bank','finance_insurance','finance_securities']],
+ ['電信',['telecom']],
+ ['生技與醫療',['bio_drugs','bio_cdmo','bio_devices']]
+];
+export function supplyChainHtml(data){
+ const t=validateThemes(data.themes,data.as_of),byid=new Map(t.groups.map(g=>[g.id,g])),ids=SUPPLY_CHAIN_FRAMES.flatMap(f=>f[1]);if(new Set(ids).size!==ids.length||ids.some(id=>!byid.has(id))||t.groups.filter(g=>g.node_kind!=='PARENT').some(g=>!ids.includes(g.id)))throw Error('供應鏈按鈕映射不完整。');
+ return electronicOverviewHtml(data)+`<p class="footnote">大框只供視覺分組；題材各自可點、成分可重疊，不能把同框或跨框成交額相加。以下為已核實成分子集，仍在補齊。</p><div class="supply-chain-frames">${SUPPLY_CHAIN_FRAMES.map(([name,keys])=>`<section class="supply-chain-frame"><h3>${esc(name)}</h3>${groupTiles(keys.map(k=>byid.get(k)),'theme')}</section>`).join('')}</div>`;
+}
+export function groupEvidence(t,g){
+ return `<details class="theme-evidence"><summary>納入理由、來源與待確認成分</summary><p>${esc(t.historical_basis)}</p><ul>${g.constituents.map(m=>`<li>${esc(m.stock_id)} ${esc(m.name)} · ${esc(m.role)}${m.evidence_limit?`<p>${esc(m.evidence_limit)}</p>`:''}<ul>${m.sources.map(k=>{const s=t.sources[k];return `<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a> · ${s.published_date?'來源日期 '+esc(s.published_date):'來源未標明發布日'} · 查核 ${esc(s.reviewed_date)}<br>${esc(s.summary)}</li>`;}).join('')}</ul></li>`).join('')}</ul>${g.pending?.length?`<h4>待補證據，未納入統計</h4><ul>${g.pending.map(m=>`<li>${esc(m.stock_id)} ${esc(m.name)}：${esc(m.reason)}</li>`).join('')}</ul>`:''}</details>`;
+}
+export function parseGroupRoute(hash='#sectors'){
+ const m=/^#sectors(?:\/(theme|industry)(?:\/([^/?#]+))?)?$/.exec(hash);if(!m)return null;
+ try{return {mode:m[1]||'theme',id:m[2]?decodeURIComponent(m[2]):null};}catch{return null;}
+}
+export function groupHref(mode,id=null){return '#sectors/'+mode+(id?'/'+encodeURIComponent(id):'');}
+export function groupTiles(groups,mode){
+ return `<div class="group-tile-grid">${groups.map(g=>`<a class="group-tile" href="${esc(groupHref(mode,g.id||g.industry))}">${esc(g.name||g.industry)}</a>`).join('')}</div>`;
+}
+export function groupCoverageHtml(data){return `<details class="group-coverage"><summary>統計範圍與每日分母</summary><p>不是交易所全市場：僅本站當日合格普通股且成交金額已知者，不含 ETF。兩圖黃線與占比分母使用完全相同的每日總成交金額；成交額不是淨資金流入。族群金額是成分股票整體成交額，不按該業務營收比例拆分；跨族群可能重疊，不可相加。</p><div class="table-scroll"><table><thead><tr><th>日期</th><th>有效／合格檔數</th><th>總成交額（億元）</th></tr></thead><tbody>${[...data.sectors.coverage].slice(-20).reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${r.valid_turnover}/${r.eligible_members}</td><td>${finite(r.denominator_ntd)?(r.denominator_ntd/1e8).toFixed(2):'缺資料'}</td></tr>`).join('')}</tbody></table></div></details>`;}
+export function groupViewHtml(data,route){
+ const mode=route?.mode||'theme',id=route?.id||null,t=validateThemes(data.themes,data.as_of),all=mode==='theme'?t.groups:data.sectors.groups;
+ const modes='';
+ if(!id)return supplyChainHtml(data);
+ const g=all.find(g=>(g.id||g.industry)===id);if(!g)return modes+`<p class="notice">找不到這個族群，沒有替換成其他群。</p><a href="${groupHref(mode)}">返回族群</a>`;
+ const byid=new Map(all.map(g=>[g.id,g]));
+ const crumbs=`<nav class="group-breadcrumb" aria-label="族群層級"><a href="#sectors">族群</a><span>›</span><span aria-current="page">${esc(g.name||g.industry)}</span></nav>`;
+ const children=(g.children||[]).map(k=>byid.get(k));if(children.some(g=>!g))throw Error('子群映射不完整。');
+ const childUI=children.length?`<section class="group-children"><h3>再看子族群</h3>${groupTiles(children,mode)}</section>`:'';
+ return modes+crumbs+childUI+groupCard(data,g,mode==='theme',mode==='theme'?groupEvidence(t,g):'')+groupCoverageHtml(data);
+}
+// Legacy industry detail URLs remain readable; broad industry buttons are no longer on the home page.
+export function sectorCards(data){return supplyChainHtml(data);}
+export function themeCards(data){return supplyChainHtml(data);}
 export function bindShareCharts(host){
- const show=(hit)=>{if(!hit)return;const card=hit.closest('.group-daily-card');for(const chart of card.querySelectorAll('.daily-share-chart')){const selected=chart.querySelector(`[data-share-i="${hit.dataset.shareI}"]`);if(!selected)continue;chart.querySelector('.share-readout').textContent=selected.dataset.shareReadout;chart.querySelectorAll('[data-share-i]').forEach(b=>b.setAttribute('aria-pressed',String(b===selected)));}};
+ if(host.dataset.groupChartsBound)return;host.dataset.groupChartsBound='true';
+ const show=hit=>{if(!hit)return;const card=hit.closest('.group-daily-card');if(!card)return;for(const chart of card.querySelectorAll('.daily-share-chart')){const selected=chart.querySelector(`[data-share-i="${hit.dataset.shareI}"]`);if(!selected)continue;chart.querySelector('.share-readout').textContent=selected.dataset.shareReadout;chart.querySelectorAll('[data-share-i]').forEach(b=>b.setAttribute('aria-pressed',String(b===selected)));}};
  for(const event of ['click','pointerover','focusin'])host.addEventListener(event,e=>show(e.target.closest('[data-share-i]')));
  host.addEventListener('keydown',e=>{const hit=e.target.closest('[data-share-i]');if(!hit||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const buttons=[...hit.closest('.share-bars').querySelectorAll('[data-share-i]')],i=buttons.indexOf(hit),next=e.key==='Home'?0:e.key==='End'?buttons.length-1:Math.min(buttons.length-1,Math.max(0,i+(e.key==='ArrowRight'?1:-1)));e.preventDefault();buttons[next].focus();show(buttons[next]);});
 }
+let groupMountGeneration=0;
 export async function mountSectors(){
- const host=document.getElementById('sectorContent');if(!host)return;
- try{
-  const d=await readStockContext(),c=d.sectors.coverage.at(-1);
-  host.innerHTML=`<p class="signal-date">成交資料日 ${esc(d.as_of)} · 依最新成交占比由高到低排列</p><div class="sector-mode" role="group" aria-label="族群分類方式"><button type="button" data-sector-mode="industry" aria-pressed="true">產業分類（${d.sectors.groups.length}）</button><button type="button" data-sector-mode="theme" aria-pressed="false">市場題材</button></div><p id="sectorModeNote"></p><p class="notice">成交占比不是資金淨流入。分母為本站同日合格普通股已知成交額，非交易所所有證券；最新 ${c.valid_turnover}/${c.eligible_members} 檔有成交資料。不含ETF。圖由左新到右舊，缺日留白。</p><div id="sectorCards" class="rank-grid group-daily-grid"></div><details><summary>每日股票池與分母</summary><div class="table-scroll"><table><thead><tr><th>日期</th><th>成交有效／母體</th><th>分母億元</th></tr></thead><tbody>${[...d.sectors.coverage].slice(-20).reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${r.valid_turnover}/${r.eligible_members}</td><td>${finite(r.denominator_ntd)?(r.denominator_ntd/1e8).toFixed(2):'缺資料'}</td></tr>`).join('')}</tbody></table></div><p>${esc(d.sectors.classification)}。</p></details>`;
-  let mode='industry';const paint=()=>{document.getElementById('sectorModeNote').textContent=mode==='industry'?`${d.sectors.groups.length}個互斥產業分類（含未分類），成分股直接列於各框。`:`市場題材成分仍在補齊，${d.themes?.groups.length??0}類為已核實子集。跨題材可重疊，占比不可合計100%；現分類回看歷史，並非PIT回測。`;try{document.getElementById('sectorCards').innerHTML=mode==='industry'?sectorCards(d):d.themes?themeCards(d):empty('此日題材資料待補，未沿用舊日。');}catch(e){document.getElementById('sectorCards').innerHTML=empty(e.message+' 缺值不補0。');}};
-  host.querySelectorAll('[data-sector-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.sectorMode;host.querySelectorAll('[data-sector-mode]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));paint();});bindShareCharts(host);paint();
- }catch(e){host.innerHTML=empty(e.message+' 缺資料不補0，其他頁不受影響。');}
+ const host=document.getElementById('sectorContent');if(!host)return;const generation=++groupMountGeneration,route=parseGroupRoute(location.hash);
+ try{const data=await readStockContext();if(generation!==groupMountGeneration)return;host.innerHTML=groupViewHtml(data,route);bindShareCharts(host);host.onclick=e=>{const button=e.target.closest('[data-member-page-go]');if(!button)return;const group=(route?.mode==='industry'?data.sectors.groups:data.themes.groups).find(g=>(g.id||g.industry)===route?.id),container=host.querySelector('.member-chart-host');if(!group||!container)return;container.innerHTML=memberChartsHtml(data,group,Number(button.dataset.memberPageGo));container.querySelector('a,button')?.focus({preventScroll:true});container.scrollIntoView({block:'start',behavior:'auto'});};}catch(e){if(generation===groupMountGeneration)host.innerHTML=empty(e.message+' 缺資料不當0。');}
 }
 
 export function validateThemes(d,day){
