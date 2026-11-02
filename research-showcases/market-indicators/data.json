@@ -1,14 +1,14 @@
 {
   "schema": "MARKET_INDICATORS_DISPLAY_V1",
-  "as_of": "2026-10-30",
-  "created_at_utc": "2026-10-30T19:05:38.687347+00:00",
+  "as_of": "2026-11-02",
+  "created_at_utc": "2026-11-02T10:52:16.572238+00:00",
   "kind": "DESCRIPTIVE_ADOPTED_DAILY_SOURCES",
   "calendar_basis": "原已核實同市場交易日曆；不以最近 N 列代替",
   "baseline_dates": {
-    "1": "2026-10-29",
-    "5": "2026-10-21",
-    "10": "2026-10-14",
-    "20": "2026-09-29"
+    "1": "2026-10-30",
+    "5": "2026-10-22",
+    "10": "2026-10-15",
+    "20": "2026-09-30"
   },
   "metrics": [
     {
@@ -16,41 +16,41 @@
       "label": "上市／加權價格指數",
       "category": "price",
       "unit": "點",
-      "as_of": "2026-10-30",
-      "value": 45211.83,
+      "as_of": "2026-11-02",
+      "value": 44920.14,
       "status": "AVAILABLE",
       "source": "已保存 TaiwanStockPrice 指數列／已發布價格指數收盤",
       "note": "價格指數，與下方含股利研究狀態口徑不同。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 45211.83,
+      "last_available_date": "2026-11-02",
+      "last_available_value": 44920.14,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 46368.33,
-          "difference": -1156.5,
-          "change_pct": -2.494159267758833
+          "baseline_date": "2026-10-30",
+          "baseline": 45211.83,
+          "difference": -291.6900000000023,
+          "change_pct": -0.6451630026919952
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 46887.77,
-          "difference": -1675.939999999995,
-          "change_pct": -3.574364914347594
+          "baseline_date": "2026-10-22",
+          "baseline": 46041.43,
+          "difference": -1121.2900000000009,
+          "change_pct": -2.43539351405897
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 48625.83,
-          "difference": -3414.0,
-          "change_pct": -7.020959847883312
+          "baseline_date": "2026-10-15",
+          "baseline": 46969.87,
+          "difference": -2049.730000000003,
+          "change_pct": -4.3639252141851825
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 47631.96,
-          "difference": -2420.1299999999974,
-          "change_pct": -5.080895264440088
+          "baseline_date": "2026-09-30",
+          "baseline": 47940.13,
+          "difference": -3019.989999999998,
+          "change_pct": -6.299503151117857
         }
       ],
       "trial_lamp": null,
@@ -61,49 +61,49 @@
       "label": "上市／加權成交量",
       "category": "volume",
       "unit": "億股",
-      "as_of": "2026-10-30",
-      "value": 131.12939113,
+      "as_of": "2026-11-02",
+      "value": 104.22514115,
       "status": "AVAILABLE",
       "source": "FinMind TaiwanStockPrice 指數列",
       "note": "直接使用指數列；前期均值不含當日，缺任一交易日則不計算。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 131.12939113,
+      "last_available_date": "2026-11-02",
+      "last_available_value": 104.22514115,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 101.21315552,
-          "difference": 29.916235609999987,
-          "change_pct": 29.557655283347483
+          "baseline_date": "2026-10-30",
+          "baseline": 131.12939113,
+          "difference": -26.90424997999999,
+          "change_pct": -20.517330057094107
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 105.65743301,
-          "difference": 25.471958119999982,
-          "change_pct": 24.108060733965765
+          "baseline_date": "2026-10-22",
+          "baseline": 119.99249506,
+          "difference": -15.767353909999997,
+          "change_pct": -13.14028340032085
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 113.76256711,
-          "difference": 17.36682401999998,
-          "change_pct": 15.265851027436428
+          "baseline_date": "2026-10-15",
+          "baseline": 187.09108648,
+          "difference": -82.86594533,
+          "change_pct": -44.29176551864129
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 96.72871036,
-          "difference": 34.400680769999994,
-          "change_pct": 35.56408499810375
+          "baseline_date": "2026-09-30",
+          "baseline": 106.56764192,
+          "difference": -2.342500770000001,
+          "change_pct": -2.1981351260061732
         }
       ],
       "trial_lamp": null,
       "is_probability": false,
       "prior_means": {
-        "5": 106.946056026,
-        "10": 118.94971689500001,
-        "20": 116.4398125315
+        "5": 112.04044764999999,
+        "10": 120.68639929700001,
+        "20": 118.15984656999998
       }
     },
     {
@@ -111,49 +111,49 @@
       "label": "上市／加權成交金額",
       "category": "volume",
       "unit": "億元",
-      "as_of": "2026-10-30",
-      "value": 9396.0526766,
+      "as_of": "2026-11-02",
+      "value": 7996.87507911,
       "status": "AVAILABLE",
       "source": "FinMind TaiwanStockPrice 指數列",
       "note": "直接使用指數列；前期均值不含當日，缺任一交易日則不計算。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 9396.0526766,
+      "last_available_date": "2026-11-02",
+      "last_available_value": 7996.87507911,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 8238.12748529,
-          "difference": 1157.9251913099997,
-          "change_pct": 14.05568429691808
+          "baseline_date": "2026-10-30",
+          "baseline": 9396.0526766,
+          "difference": -1399.1775974900002,
+          "change_pct": -14.891121257488503
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 8746.14166736,
-          "difference": 649.9110092400006,
-          "change_pct": 7.430831033362106
+          "baseline_date": "2026-10-22",
+          "baseline": 9334.3747356,
+          "difference": -1337.4996564900002,
+          "change_pct": -14.328754676935818
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 9781.37416296,
-          "difference": -385.32148636000056,
-          "change_pct": -3.939338992052177
+          "baseline_date": "2026-10-15",
+          "baseline": 14357.55219704,
+          "difference": -6360.67711793,
+          "change_pct": -44.301960603293765
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 8361.44707733,
-          "difference": 1034.6055992700003,
-          "change_pct": 12.373523263396336
+          "baseline_date": "2026-09-30",
+          "baseline": 9214.92702613,
+          "difference": -1218.0519470200006,
+          "change_pct": -13.218248430682866
         }
       ],
       "trial_lamp": null,
       "is_probability": false,
       "prior_means": {
-        "5": 8827.776929290001,
-        "10": 9491.255232357002,
-        "20": 9650.6211783775
+        "5": 8957.759131138,
+        "10": 9452.723083720999,
+        "20": 9702.351458341
       }
     },
     {
@@ -161,41 +161,41 @@
       "label": "上市／加權距 5 日均線",
       "category": "trend",
       "unit": "百分點",
-      "as_of": "2026-10-30",
-      "value": -2.0343145539784113,
+      "as_of": "2026-11-02",
+      "value": -2.191074236090085,
       "status": "AVAILABLE",
       "source": "已保存 TaiwanStockPrice 指數列／已發布價格指數收盤",
       "note": "均線含當日及前 4 個交易日；顯示 (收盤/均線−1)×100。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": -2.0343145539784113,
+      "last_available_date": "2026-11-02",
+      "last_available_value": -2.191074236090085,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": -0.2528467361306408,
-          "difference": -1.7814678178477705,
+          "baseline_date": "2026-10-30",
+          "baseline": -2.0343145539784113,
+          "difference": -0.15675968211167346,
           "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 0.1516293879404218,
-          "difference": -2.185943941918833,
-          "change_pct": -1441.6360651523132
+          "baseline_date": "2026-10-22",
+          "baseline": -1.2645296290925478,
+          "difference": -0.9265446069975369,
+          "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": -0.9208892121489898,
-          "difference": -1.1134253418294215,
+          "baseline_date": "2026-10-15",
+          "baseline": -3.175833214767898,
+          "difference": 0.9847589786778133,
           "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": -0.49013745960333477,
-          "difference": -1.5441770943750766,
-          "change_pct": null
+          "baseline_date": "2026-09-30",
+          "baseline": 0.06115527533125942,
+          "difference": -2.252229511421344,
+          "change_pct": -3682.804957089484
         }
       ],
       "trial_lamp": null,
@@ -206,41 +206,41 @@
       "label": "上市／加權距 10 日均線",
       "category": "trend",
       "unit": "百分點",
-      "as_of": "2026-10-30",
-      "value": -2.7362282945833205,
+      "as_of": "2026-11-02",
+      "value": -2.9357270132443936,
       "status": "AVAILABLE",
       "source": "已保存 TaiwanStockPrice 指數列／已發布價格指數收盤",
       "note": "均線含當日及前 9 個交易日；顯示 (收盤/均線−1)×100。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": -2.7362282945833205,
+      "last_available_date": "2026-11-02",
+      "last_available_value": -2.9357270132443936,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": -0.9755466567728299,
-          "difference": -1.7606816378104906,
+          "baseline_date": "2026-10-30",
+          "baseline": -2.7362282945833205,
+          "difference": -0.19949871866107305,
           "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": -2.209743609658632,
-          "difference": -0.5264846849246885,
+          "baseline_date": "2026-10-22",
+          "baseline": -3.214909956925671,
+          "difference": 0.2791829436812776,
           "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": -0.7013702425638813,
-          "difference": -2.0348580520194393,
+          "baseline_date": "2026-10-15",
+          "baseline": -3.8925762794681296,
+          "difference": 0.956849266223736,
           "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 1.3393088513764972,
-          "difference": -4.075537145959817,
-          "change_pct": -304.3015165449789
+          "baseline_date": "2026-09-30",
+          "baseline": 1.5460997814180422,
+          "difference": -4.481826794662435,
+          "change_pct": -289.8795309673883
         }
       ],
       "trial_lamp": null,
@@ -251,41 +251,41 @@
       "label": "上市／加權距 20 日均線",
       "category": "trend",
       "unit": "百分點",
-      "as_of": "2026-10-30",
-      "value": -5.268934558663563,
+      "as_of": "2026-11-02",
+      "value": -5.581378015314575,
       "status": "AVAILABLE",
       "source": "已保存 TaiwanStockPrice 指數列／已發布價格指數收盤",
       "note": "均線含當日及前 19 個交易日；顯示 (收盤/均線−1)×100。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": -5.268934558663563,
+      "last_available_date": "2026-11-02",
+      "last_available_value": -5.581378015314575,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": -3.0914562647610833,
-          "difference": -2.17747829390248,
+          "baseline_date": "2026-10-30",
+          "baseline": -5.268934558663563,
+          "difference": -0.31244345665101214,
           "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": -2.6325383123829926,
-          "difference": -2.6363962462805706,
+          "baseline_date": "2026-10-22",
+          "baseline": -4.2232431111992375,
+          "difference": -1.3581349041153379,
           "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 1.3336447027769927,
-          "difference": -6.602579261440556,
-          "change_pct": -495.0778305265473
+          "baseline_date": "2026-10-15",
+          "baseline": -2.2300976786890025,
+          "difference": -3.351280336625573,
+          "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 1.7324811322899647,
-          "difference": -7.001415690953528,
-          "change_pct": -404.12651892486554
+          "baseline_date": "2026-09-30",
+          "baseline": 2.1929614245105755,
+          "difference": -7.774339439825151,
+          "change_pct": -354.5132783883887
         }
       ],
       "trial_lamp": null,
@@ -296,9 +296,9 @@
       "label": "上市／加權融資金額餘額",
       "category": "credit",
       "unit": "億元",
-      "as_of": "2026-10-30",
-      "value": 6234.67886,
-      "status": "AVAILABLE",
+      "as_of": "2026-11-02",
+      "value": null,
+      "status": "MISSING",
       "source": "既有官方融資金額模組",
       "note": "比較各日原報餘額；可能含調帳，不代表純資金流。當日缺值不以先前值代替。",
       "last_available_date": "2026-10-30",
@@ -306,31 +306,31 @@
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 6339.10848,
-          "difference": -104.42961999999989,
-          "change_pct": -1.6473865422792056
+          "baseline_date": "2026-10-30",
+          "baseline": 6234.67886,
+          "difference": null,
+          "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 6443.73559,
-          "difference": -209.05673000000024,
-          "change_pct": -3.244340601505036
+          "baseline_date": "2026-10-22",
+          "baseline": 6338.80174,
+          "difference": null,
+          "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 6515.6739,
-          "difference": -280.9950399999998,
-          "change_pct": -4.312601341205857
+          "baseline_date": "2026-10-15",
+          "baseline": 6464.15015,
+          "difference": null,
+          "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 6186.53344,
-          "difference": 48.14541999999983,
-          "change_pct": 0.7782293665254958
+          "baseline_date": "2026-09-30",
+          "baseline": 6222.52453,
+          "difference": null,
+          "change_pct": null
         }
       ],
       "trial_lamp": null,
@@ -341,151 +341,151 @@
       "label": "上市／加權上漲家數",
       "category": "breadth",
       "unit": "家",
-      "as_of": "2026-10-30",
-      "value": 92,
+      "as_of": "2026-11-02",
+      "value": 515,
       "status": "AVAILABLE",
       "source": "普通股固定樣本 spread 正／負／零",
-      "note": "固定可用樣本 1085/1092 家；不含 ETF、權證。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 92,
+      "note": "固定可用樣本 1086/1093 家；不含 ETF、權證。",
+      "last_available_date": "2026-11-02",
+      "last_available_value": 515,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 231,
-          "difference": -139,
-          "change_pct": -60.17316017316017
+          "baseline_date": "2026-10-30",
+          "baseline": 92,
+          "difference": 423,
+          "change_pct": 459.78260869565213
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 598,
-          "difference": -506,
-          "change_pct": -84.61538461538461
+          "baseline_date": "2026-10-22",
+          "baseline": 245,
+          "difference": 270,
+          "change_pct": 110.20408163265304
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 742,
-          "difference": -650,
-          "change_pct": -87.60107816711592
+          "baseline_date": "2026-10-15",
+          "baseline": 201,
+          "difference": 314,
+          "change_pct": 156.21890547263683
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 376,
-          "difference": -284,
-          "change_pct": -75.53191489361703
+          "baseline_date": "2026-09-30",
+          "baseline": 828,
+          "difference": -313,
+          "change_pct": -37.80193236714976
         }
       ],
       "trial_lamp": null,
       "is_probability": false,
-      "sample_count": 1085,
-      "target_universe_count": 1092,
-      "sample_membership_date": "2026-10-30"
+      "sample_count": 1086,
+      "target_universe_count": 1093,
+      "sample_membership_date": "2026-11-02"
     },
     {
       "id": "TAIEX_decliners",
       "label": "上市／加權下跌家數",
       "category": "breadth",
       "unit": "家",
-      "as_of": "2026-10-30",
-      "value": 938,
+      "as_of": "2026-11-02",
+      "value": 447,
       "status": "AVAILABLE",
       "source": "普通股固定樣本 spread 正／負／零",
-      "note": "固定可用樣本 1085/1092 家；不含 ETF、權證。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 938,
+      "note": "固定可用樣本 1086/1093 家；不含 ETF、權證。",
+      "last_available_date": "2026-11-02",
+      "last_available_value": 447,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 735,
-          "difference": 203,
-          "change_pct": 27.61904761904761
+          "baseline_date": "2026-10-30",
+          "baseline": 938,
+          "difference": -491,
+          "change_pct": -52.345415778251606
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 383,
-          "difference": 555,
-          "change_pct": 144.90861618798957
+          "baseline_date": "2026-10-22",
+          "baseline": 760,
+          "difference": -313,
+          "change_pct": -41.18421052631579
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 241,
-          "difference": 697,
-          "change_pct": 289.2116182572614
+          "baseline_date": "2026-10-15",
+          "baseline": 808,
+          "difference": -361,
+          "change_pct": -44.67821782178218
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 587,
-          "difference": 351,
-          "change_pct": 59.79557069846677
+          "baseline_date": "2026-09-30",
+          "baseline": 190,
+          "difference": 257,
+          "change_pct": 135.26315789473685
         }
       ],
       "trial_lamp": null,
       "is_probability": false,
-      "sample_count": 1085,
-      "target_universe_count": 1092,
-      "sample_membership_date": "2026-10-30"
+      "sample_count": 1086,
+      "target_universe_count": 1093,
+      "sample_membership_date": "2026-11-02"
     },
     {
       "id": "TAIEX_unchanged",
       "label": "上市／加權平盤家數",
       "category": "breadth",
       "unit": "家",
-      "as_of": "2026-10-30",
-      "value": 55,
+      "as_of": "2026-11-02",
+      "value": 124,
       "status": "AVAILABLE",
       "source": "普通股固定樣本 spread 正／負／零",
-      "note": "固定可用樣本 1085/1092 家；不含 ETF、權證。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 55,
+      "note": "固定可用樣本 1086/1093 家；不含 ETF、權證。",
+      "last_available_date": "2026-11-02",
+      "last_available_value": 124,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 119,
-          "difference": -64,
-          "change_pct": -53.78151260504202
+          "baseline_date": "2026-10-30",
+          "baseline": 56,
+          "difference": 68,
+          "change_pct": 121.42857142857144
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 104,
-          "difference": -49,
-          "change_pct": -47.11538461538461
+          "baseline_date": "2026-10-22",
+          "baseline": 81,
+          "difference": 43,
+          "change_pct": 53.08641975308641
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 102,
-          "difference": -47,
-          "change_pct": -46.07843137254902
+          "baseline_date": "2026-10-15",
+          "baseline": 77,
+          "difference": 47,
+          "change_pct": 61.03896103896105
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 122,
-          "difference": -67,
-          "change_pct": -54.91803278688525
+          "baseline_date": "2026-09-30",
+          "baseline": 68,
+          "difference": 56,
+          "change_pct": 82.35294117647058
         }
       ],
       "trial_lamp": null,
       "is_probability": false,
-      "sample_count": 1085,
-      "target_universe_count": 1092,
-      "sample_membership_date": "2026-10-30"
+      "sample_count": 1086,
+      "target_universe_count": 1093,
+      "sample_membership_date": "2026-11-02"
     },
     {
       "id": "TAIEX_above_ma20",
       "label": "上市／加權站上 20 日均線比例",
       "category": "breadth",
       "unit": "%",
-      "as_of": "2026-10-30",
+      "as_of": "2026-11-02",
       "value": null,
       "status": "MISSING",
       "source": "待完整 20 交易日個股歷史",
@@ -495,28 +495,28 @@
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
+          "baseline_date": "2026-10-30",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
+          "baseline_date": "2026-10-22",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
+          "baseline_date": "2026-10-15",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
+          "baseline_date": "2026-09-30",
           "baseline": null,
           "difference": null,
           "change_pct": null
@@ -530,41 +530,41 @@
       "label": "上櫃／櫃買價格指數",
       "category": "price",
       "unit": "點",
-      "as_of": "2026-10-30",
-      "value": 370.26,
+      "as_of": "2026-11-02",
+      "value": 369.24,
       "status": "AVAILABLE",
       "source": "已保存 TaiwanStockPrice 指數列／已發布價格指數收盤",
       "note": "價格指數，與下方含股利研究狀態口徑不同。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 370.26,
+      "last_available_date": "2026-11-02",
+      "last_available_value": 369.24,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 387.37,
-          "difference": -17.110000000000014,
-          "change_pct": -4.4169656917159354
+          "baseline_date": "2026-10-30",
+          "baseline": 370.26,
+          "difference": -1.0199999999999818,
+          "change_pct": -0.2754820936639035
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 395.42,
-          "difference": -25.160000000000025,
-          "change_pct": -6.362854686156494
+          "baseline_date": "2026-10-22",
+          "baseline": 381.69,
+          "difference": -12.449999999999989,
+          "change_pct": -3.2618093217008592
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 420.13,
-          "difference": -49.870000000000005,
-          "change_pct": -11.870135434270345
+          "baseline_date": "2026-10-15",
+          "baseline": 396.9,
+          "difference": -27.659999999999968,
+          "change_pct": -6.969009826152672
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 412.25,
-          "difference": -41.99000000000001,
-          "change_pct": -10.185567010309281
+          "baseline_date": "2026-09-30",
+          "baseline": 417.07,
+          "difference": -47.829999999999984,
+          "change_pct": -11.468098880283883
         }
       ],
       "trial_lamp": null,
@@ -575,49 +575,49 @@
       "label": "上櫃／櫃買成交量",
       "category": "volume",
       "unit": "億股",
-      "as_of": "2026-10-30",
-      "value": 8.75008,
+      "as_of": "2026-11-02",
+      "value": 6.87422,
       "status": "AVAILABLE",
       "source": "FinMind TaiwanStockPrice 指數列",
       "note": "直接使用指數列；前期均值不含當日，缺任一交易日則不計算。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 8.75008,
+      "last_available_date": "2026-11-02",
+      "last_available_value": 6.87422,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 8.2393,
-          "difference": 0.5107800000000005,
-          "change_pct": 6.199313048438593
+          "baseline_date": "2026-10-30",
+          "baseline": 8.75008,
+          "difference": -1.8758600000000003,
+          "change_pct": -21.438203993563487
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 8.98957,
-          "difference": -0.23948999999999998,
-          "change_pct": -2.664087381265179
+          "baseline_date": "2026-10-22",
+          "baseline": 10.17848,
+          "difference": -3.30426,
+          "change_pct": -32.46319686239989
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 10.5664,
-          "difference": -1.8163199999999993,
-          "change_pct": -17.189582071471833
+          "baseline_date": "2026-10-15",
+          "baseline": 10.43536,
+          "difference": -3.561139999999999,
+          "change_pct": -34.12570337774643
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 7.47337,
-          "difference": 1.2767100000000005,
-          "change_pct": 17.083457663677848
+          "baseline_date": "2026-09-30",
+          "baseline": 9.96932,
+          "difference": -3.0950999999999995,
+          "change_pct": -31.04624989467687
         }
       ],
       "trial_lamp": null,
       "is_probability": false,
       "prior_means": {
-        "5": 8.423820000000001,
-        "10": 9.349198,
-        "20": 10.202266
+        "5": 8.375922,
+        "10": 9.167565999999999,
+        "20": 10.266101500000001
       }
     },
     {
@@ -625,49 +625,49 @@
       "label": "上櫃／櫃買成交金額",
       "category": "volume",
       "unit": "億元",
-      "as_of": "2026-10-30",
-      "value": 1981.82091,
+      "as_of": "2026-11-02",
+      "value": 1548.20241,
       "status": "AVAILABLE",
       "source": "FinMind TaiwanStockPrice 指數列",
       "note": "直接使用指數列；前期均值不含當日，缺任一交易日則不計算。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 1981.82091,
+      "last_available_date": "2026-11-02",
+      "last_available_value": 1548.20241,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 2081.06736,
-          "difference": -99.2464500000001,
-          "change_pct": -4.76901670304416
+          "baseline_date": "2026-10-30",
+          "baseline": 1981.82091,
+          "difference": -433.6184999999998,
+          "change_pct": -21.879802448950837
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 2138.21884,
-          "difference": -156.3979300000001,
-          "change_pct": -7.314402392974895
+          "baseline_date": "2026-10-22",
+          "baseline": 2252.12361,
+          "difference": -703.9212,
+          "change_pct": -31.25588652747173
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 2276.74773,
-          "difference": -294.92682000000013,
-          "change_pct": -12.953864677840265
+          "baseline_date": "2026-10-15",
+          "baseline": 2443.21002,
+          "difference": -895.0076099999999,
+          "change_pct": -36.632446767715855
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 1753.57678,
-          "difference": 228.2441299999998,
-          "change_pct": 13.015918812519844
+          "baseline_date": "2026-09-30",
+          "baseline": 2322.19046,
+          "difference": -773.9880499999997,
+          "change_pct": -33.33008482000223
         }
       ],
       "trial_lamp": null,
       "is_probability": false,
       "prior_means": {
-        "5": 1970.265224,
-        "10": 2097.342914,
-        "20": 2326.461399
+        "5": 1938.985638,
+        "10": 2067.850232,
+        "20": 2337.8736055
       }
     },
     {
@@ -675,41 +675,41 @@
       "label": "上櫃／櫃買距 5 日均線",
       "category": "trend",
       "unit": "百分點",
-      "as_of": "2026-10-30",
-      "value": -3.2318765583102094,
+      "as_of": "2026-11-02",
+      "value": -2.8663425721320857,
       "status": "AVAILABLE",
       "source": "已保存 TaiwanStockPrice 指數列／已發布價格指數收盤",
       "note": "均線含當日及前 4 個交易日；顯示 (收盤/均線−1)×100。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": -3.2318765583102094,
+      "last_available_date": "2026-11-02",
+      "last_available_value": -2.8663425721320857,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": -0.07429228856363768,
-          "difference": -3.1575842697465717,
+          "baseline_date": "2026-10-30",
+          "baseline": -3.2318765583102094,
+          "difference": 0.3655339861781237,
           "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 0.13117178439208121,
-          "difference": -3.3630483427022906,
-          "change_pct": -2563.850418204204
+          "baseline_date": "2026-10-22",
+          "baseline": -2.595314653192471,
+          "difference": -0.27102791893961475,
+          "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": -0.889828309373375,
-          "difference": -2.3420482489368344,
+          "baseline_date": "2026-10-15",
+          "baseline": -4.8634914547328485,
+          "difference": 1.9971488826007628,
           "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": -0.2656357355061534,
-          "difference": -2.966240822804056,
-          "change_pct": null
+          "baseline_date": "2026-09-30",
+          "baseline": 0.6812344296170503,
+          "difference": -3.547577001749136,
+          "change_pct": -520.7571501844635
         }
       ],
       "trial_lamp": null,
@@ -720,41 +720,41 @@
       "label": "上櫃／櫃買距 10 日均線",
       "category": "trend",
       "unit": "百分點",
-      "as_of": "2026-10-30",
-      "value": -4.759699972219655,
+      "as_of": "2026-11-02",
+      "value": -4.341473271882235,
       "status": "AVAILABLE",
       "source": "已保存 TaiwanStockPrice 指數列／已發布價格指數收盤",
       "note": "均線含當日及前 9 個交易日；顯示 (收盤/均線−1)×100。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": -4.759699972219655,
+      "last_available_date": "2026-11-02",
+      "last_available_value": -4.341473271882235,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": -1.6205673128449227,
-          "difference": -3.1391326593747326,
+          "baseline_date": "2026-10-30",
+          "baseline": -4.759699972219655,
+          "difference": 0.4182267003374207,
           "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": -3.415225133243116,
-          "difference": -1.3444748389765393,
+          "baseline_date": "2026-10-22",
+          "baseline": -5.644892157468629,
+          "difference": 1.3034188855863942,
           "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": -1.0450647365433552,
-          "difference": -3.7146352356763,
+          "baseline_date": "2026-10-15",
+          "baseline": -6.070287539936114,
+          "difference": 1.7288142680538794,
           "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 1.5344071720605035,
-          "difference": -6.294107144280159,
-          "change_pct": -410.19797475451156
+          "baseline_date": "2026-09-30",
+          "baseline": 2.157938568559259,
+          "difference": -6.499411840441494,
+          "change_pct": -301.1861382495613
         }
       ],
       "trial_lamp": null,
@@ -765,41 +765,41 @@
       "label": "上櫃／櫃買距 20 日均線",
       "category": "trend",
       "unit": "百分點",
-      "as_of": "2026-10-30",
-      "value": -8.95219781368224,
+      "as_of": "2026-11-02",
+      "value": -8.66590480713575,
       "status": "AVAILABLE",
       "source": "已保存 TaiwanStockPrice 指數列／已發布價格指數收盤",
       "note": "均線含當日及前 19 個交易日；顯示 (收盤/均線−1)×100。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": -8.95219781368224,
+      "last_available_date": "2026-11-02",
+      "last_available_value": -8.66590480713575,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": -5.234058688977772,
-          "difference": -3.718139124704468,
+          "baseline_date": "2026-10-30",
+          "baseline": -8.95219781368224,
+          "difference": 0.28629300654649015,
           "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": -4.5676801513710785,
-          "difference": -4.384517662311161,
+          "baseline_date": "2026-10-22",
+          "baseline": -7.536785189994244,
+          "difference": -1.1291196171415052,
           "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 1.1645980493313557,
-          "difference": -10.116795863013596,
-          "change_pct": -868.6942133229632
+          "baseline_date": "2026-10-15",
+          "baseline": -4.454688797679385,
+          "difference": -4.211216009456365,
+          "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 1.755827974028512,
-          "difference": -10.708025787710753,
-          "change_pct": -609.8562015242655
+          "baseline_date": "2026-09-30",
+          "baseline": 2.7506436235079645,
+          "difference": -11.416548430643715,
+          "change_pct": -415.0500753014272
         }
       ],
       "trial_lamp": null,
@@ -810,9 +810,9 @@
       "label": "上櫃／櫃買融資金額餘額",
       "category": "credit",
       "unit": "億元",
-      "as_of": "2026-10-30",
-      "value": 2053.01345,
-      "status": "AVAILABLE",
+      "as_of": "2026-11-02",
+      "value": null,
+      "status": "MISSING",
       "source": "既有官方融資金額模組",
       "note": "比較各日原報餘額；可能含調帳，不代表純資金流。當日缺值不以先前值代替。",
       "last_available_date": "2026-10-30",
@@ -820,31 +820,31 @@
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 2099.58881,
-          "difference": -46.57536000000027,
-          "change_pct": -2.218308641109601
+          "baseline_date": "2026-10-30",
+          "baseline": 2053.01345,
+          "difference": null,
+          "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 2159.68217,
-          "difference": -106.66872000000012,
-          "change_pct": -4.939093422251117
+          "baseline_date": "2026-10-22",
+          "baseline": 2126.30453,
+          "difference": null,
+          "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 2255.30654,
-          "difference": -202.29309000000012,
-          "change_pct": -8.969649420694715
+          "baseline_date": "2026-10-15",
+          "baseline": 2189.62901,
+          "difference": null,
+          "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 2136.753,
-          "difference": -83.73955000000024,
-          "change_pct": -3.9190093567202267
+          "baseline_date": "2026-09-30",
+          "baseline": 2158.78925,
+          "difference": null,
+          "change_pct": null
         }
       ],
       "trial_lamp": null,
@@ -855,151 +855,151 @@
       "label": "上櫃／櫃買上漲家數",
       "category": "breadth",
       "unit": "家",
-      "as_of": "2026-10-30",
-      "value": 127,
+      "as_of": "2026-11-02",
+      "value": 387,
       "status": "AVAILABLE",
       "source": "普通股固定樣本 spread 正／負／零",
       "note": "固定可用樣本 883/897 家；不含 ETF、權證。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 127,
+      "last_available_date": "2026-11-02",
+      "last_available_value": 387,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 190,
-          "difference": -63,
-          "change_pct": -33.15789473684211
+          "baseline_date": "2026-10-30",
+          "baseline": 127,
+          "difference": 260,
+          "change_pct": 204.7244094488189
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 516,
-          "difference": -389,
-          "change_pct": -75.3875968992248
+          "baseline_date": "2026-10-22",
+          "baseline": 143,
+          "difference": 244,
+          "change_pct": 170.6293706293706
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 556,
-          "difference": -429,
-          "change_pct": -77.15827338129496
+          "baseline_date": "2026-10-15",
+          "baseline": 103,
+          "difference": 284,
+          "change_pct": 275.7281553398058
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 388,
-          "difference": -261,
-          "change_pct": -67.26804123711341
+          "baseline_date": "2026-09-30",
+          "baseline": 512,
+          "difference": -125,
+          "change_pct": -24.4140625
         }
       ],
       "trial_lamp": null,
       "is_probability": false,
       "sample_count": 883,
       "target_universe_count": 897,
-      "sample_membership_date": "2026-10-30"
+      "sample_membership_date": "2026-11-02"
     },
     {
       "id": "TPEx_decliners",
       "label": "上櫃／櫃買下跌家數",
       "category": "breadth",
       "unit": "家",
-      "as_of": "2026-10-30",
-      "value": 684,
+      "as_of": "2026-11-02",
+      "value": 383,
       "status": "AVAILABLE",
       "source": "普通股固定樣本 spread 正／負／零",
       "note": "固定可用樣本 883/897 家；不含 ETF、權證。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 684,
+      "last_available_date": "2026-11-02",
+      "last_available_value": 383,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 595,
-          "difference": 89,
-          "change_pct": 14.957983193277302
+          "baseline_date": "2026-10-30",
+          "baseline": 684,
+          "difference": -301,
+          "change_pct": -44.00584795321637
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 250,
-          "difference": 434,
-          "change_pct": 173.60000000000002
+          "baseline_date": "2026-10-22",
+          "baseline": 652,
+          "difference": -269,
+          "change_pct": -41.257668711656436
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 221,
-          "difference": 463,
-          "change_pct": 209.50226244343892
+          "baseline_date": "2026-10-15",
+          "baseline": 704,
+          "difference": -321,
+          "change_pct": -45.59659090909091
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 394,
-          "difference": 290,
-          "change_pct": 73.6040609137056
+          "baseline_date": "2026-09-30",
+          "baseline": 266,
+          "difference": 117,
+          "change_pct": 43.984962406015036
         }
       ],
       "trial_lamp": null,
       "is_probability": false,
       "sample_count": 883,
       "target_universe_count": 897,
-      "sample_membership_date": "2026-10-30"
+      "sample_membership_date": "2026-11-02"
     },
     {
       "id": "TPEx_unchanged",
       "label": "上櫃／櫃買平盤家數",
       "category": "breadth",
       "unit": "家",
-      "as_of": "2026-10-30",
-      "value": 72,
+      "as_of": "2026-11-02",
+      "value": 113,
       "status": "AVAILABLE",
       "source": "普通股固定樣本 spread 正／負／零",
       "note": "固定可用樣本 883/897 家；不含 ETF、權證。",
-      "last_available_date": "2026-10-30",
-      "last_available_value": 72,
+      "last_available_date": "2026-11-02",
+      "last_available_value": 113,
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
-          "baseline": 98,
-          "difference": -26,
-          "change_pct": -26.530612244897956
+          "baseline_date": "2026-10-30",
+          "baseline": 72,
+          "difference": 41,
+          "change_pct": 56.94444444444444
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
-          "baseline": 117,
-          "difference": -45,
-          "change_pct": -38.46153846153846
+          "baseline_date": "2026-10-22",
+          "baseline": 88,
+          "difference": 25,
+          "change_pct": 28.409090909090917
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
-          "baseline": 106,
-          "difference": -34,
-          "change_pct": -32.07547169811321
+          "baseline_date": "2026-10-15",
+          "baseline": 76,
+          "difference": 37,
+          "change_pct": 48.684210526315795
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
-          "baseline": 101,
-          "difference": -29,
-          "change_pct": -28.712871287128717
+          "baseline_date": "2026-09-30",
+          "baseline": 105,
+          "difference": 8,
+          "change_pct": 7.619047619047614
         }
       ],
       "trial_lamp": null,
       "is_probability": false,
       "sample_count": 883,
       "target_universe_count": 897,
-      "sample_membership_date": "2026-10-30"
+      "sample_membership_date": "2026-11-02"
     },
     {
       "id": "TPEx_above_ma20",
       "label": "上櫃／櫃買站上 20 日均線比例",
       "category": "breadth",
       "unit": "%",
-      "as_of": "2026-10-30",
+      "as_of": "2026-11-02",
       "value": null,
       "status": "MISSING",
       "source": "待完整 20 交易日個股歷史",
@@ -1009,28 +1009,28 @@
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
+          "baseline_date": "2026-10-30",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
+          "baseline_date": "2026-10-22",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
+          "baseline_date": "2026-10-15",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
+          "baseline_date": "2026-09-30",
           "baseline": null,
           "difference": null,
           "change_pct": null
@@ -1044,7 +1044,7 @@
       "label": "全市場融券餘額",
       "category": "pending",
       "unit": "—",
-      "as_of": "2026-10-30",
+      "as_of": "2026-11-02",
       "value": null,
       "status": "MISSING",
       "source": "待對應來源／口徑核實",
@@ -1054,28 +1054,28 @@
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
+          "baseline_date": "2026-10-30",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
+          "baseline_date": "2026-10-22",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
+          "baseline_date": "2026-10-15",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
+          "baseline_date": "2026-09-30",
           "baseline": null,
           "difference": null,
           "change_pct": null
@@ -1089,7 +1089,7 @@
       "label": "全市場借券賣出餘額",
       "category": "pending",
       "unit": "—",
-      "as_of": "2026-10-30",
+      "as_of": "2026-11-02",
       "value": null,
       "status": "MISSING",
       "source": "待對應來源／口徑核實",
@@ -1099,28 +1099,28 @@
       "comparisons": [
         {
           "sessions": 1,
-          "baseline_date": "2026-10-29",
+          "baseline_date": "2026-10-30",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 5,
-          "baseline_date": "2026-10-21",
+          "baseline_date": "2026-10-22",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 10,
-          "baseline_date": "2026-10-14",
+          "baseline_date": "2026-10-15",
           "baseline": null,
           "difference": null,
           "change_pct": null
         },
         {
           "sessions": 20,
-          "baseline_date": "2026-09-29",
+          "baseline_date": "2026-09-30",
           "baseline": null,
           "difference": null,
           "change_pct": null
