@@ -3,8 +3,8 @@
   "as_of": "2026-11-05",
   "files": {
     "data.json": {
-      "bytes": 35482,
-      "sha256": "c44fe464a67ff4abc6892e70db02a955313a0c042f739cff5dca9e7941bd6e2d"
+      "bytes": 35726,
+      "sha256": "ba0afddc009a9e01de1b3a22089465582dcd26c7bbd8316677790b32efa5550f"
     }
   },
   "ETF_holdings_included": false

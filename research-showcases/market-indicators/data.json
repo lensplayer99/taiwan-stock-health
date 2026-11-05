@@ -1,7 +1,7 @@
 {
   "schema": "MARKET_INDICATORS_DISPLAY_V1",
   "as_of": "2026-11-05",
-  "created_at_utc": "2026-11-05T10:32:33.362615+00:00",
+  "created_at_utc": "2026-11-05T13:25:11.048715+00:00",
   "kind": "DESCRIPTIVE_ADOPTED_DAILY_SOURCES",
   "calendar_basis": "原已核實同市場交易日曆；不以最近 N 列代替",
   "baseline_dates": {
@@ -297,40 +297,40 @@
       "category": "credit",
       "unit": "億元",
       "as_of": "2026-11-05",
-      "value": null,
-      "status": "MISSING",
+      "value": 5764.09039,
+      "status": "AVAILABLE",
       "source": "既有官方融資金額模組",
       "note": "比較各日原報餘額；可能含調帳，不代表純資金流。當日缺值不以先前值代替。",
-      "last_available_date": "2026-11-04",
-      "last_available_value": 5969.4587,
+      "last_available_date": "2026-11-05",
+      "last_available_value": 5764.09039,
       "comparisons": [
         {
           "sessions": 1,
           "baseline_date": "2026-11-04",
           "baseline": 5969.4587,
-          "difference": null,
-          "change_pct": null
+          "difference": -205.36830999999984,
+          "change_pct": -3.440317126241277
         },
         {
           "sessions": 5,
           "baseline_date": "2026-10-29",
           "baseline": 6339.10848,
-          "difference": null,
-          "change_pct": null
+          "difference": -575.0180899999996,
+          "change_pct": -9.070961505299868
         },
         {
           "sessions": 10,
           "baseline_date": "2026-10-20",
           "baseline": 6381.00111,
-          "difference": null,
-          "change_pct": null
+          "difference": -616.9107199999999,
+          "change_pct": -9.667929990377322
         },
         {
           "sessions": 20,
           "baseline_date": "2026-10-05",
           "baseline": 6333.51721,
-          "difference": null,
-          "change_pct": null
+          "difference": -569.4268199999997,
+          "change_pct": -8.99068876138729
         }
       ],
       "trial_lamp": null,
@@ -811,40 +811,40 @@
       "category": "credit",
       "unit": "億元",
       "as_of": "2026-11-05",
-      "value": null,
-      "status": "MISSING",
+      "value": 1840.37303,
+      "status": "AVAILABLE",
       "source": "既有官方融資金額模組",
       "note": "比較各日原報餘額；可能含調帳，不代表純資金流。當日缺值不以先前值代替。",
-      "last_available_date": "2026-11-04",
-      "last_available_value": 1909.19219,
+      "last_available_date": "2026-11-05",
+      "last_available_value": 1840.37303,
       "comparisons": [
         {
           "sessions": 1,
           "baseline_date": "2026-11-04",
           "baseline": 1909.19219,
-          "difference": null,
-          "change_pct": null
+          "difference": -68.81916000000001,
+          "change_pct": -3.604621910798833
         },
         {
           "sessions": 5,
           "baseline_date": "2026-10-29",
           "baseline": 2099.58881,
-          "difference": null,
-          "change_pct": null
+          "difference": -259.2157800000002,
+          "change_pct": -12.346025982106479
         },
         {
           "sessions": 10,
           "baseline_date": "2026-10-20",
           "baseline": 2150.0823,
-          "difference": null,
-          "change_pct": null
+          "difference": -309.70927000000006,
+          "change_pct": -14.40453093353683
         },
         {
           "sessions": 20,
           "baseline_date": "2026-10-05",
           "baseline": 2241.73355,
-          "difference": null,
-          "change_pct": null
+          "difference": -401.36051999999995,
+          "change_pct": -17.90402432082082
         }
       ],
       "trial_lamp": null,
