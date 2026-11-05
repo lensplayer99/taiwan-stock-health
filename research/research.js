@@ -257,6 +257,112 @@ export function renderStock(body,{showLights=true}={}){
   return showLights?header+lights+observation:observation;
 }
 
+export const OFFICIAL_CREDIT_METRIC_ID='ALL_credit_maintenance_ratio';
+export function isOfficialCreditSourceUrl(value){
+  if(typeof value!=='string')return false;
+  try{
+    const parsed=new URL(value);
+    return parsed.protocol==='https:'&&parsed.hostname==='www.twse.com.tw'&&parsed.port===''&&parsed.pathname==='/dashboard/zh/credit/margin.html'&&parsed.username===''&&parsed.password.length===0&&parsed.search===''&&parsed.hash==='';
+  }catch{return false;}
+}
+export const OFFICIAL_CREDIT_MARKET_SCOPE='TWSE_AND_TPEX_CREDIT_TRADING';
+export function validateOfficialCreditMetric(metric,targetDate){
+  const m=metric,positive=value=>typeof value==='number'&&Number.isFinite(value)&&value>0;
+  if(!m||m.id!==OFFICIAL_CREDIT_METRIC_ID||!validDate(targetDate)||m.as_of!==targetDate||m.category!=='credit'||m.unit!=='%'||m.is_probability!==false||m.trial_lamp!==null||!isOfficialCreditSourceUrl(m.source_url)||m.market_scope!==OFFICIAL_CREDIT_MARKET_SCOPE||!['AVAILABLE','WAITING_OFFICIAL','MISSING','SOURCE_ERROR'].includes(m.official_status))throw Error('官方信用交易維持率來源或口徑未通過核對。');
+  if(m.official_data_date!==null&&(!validDate(m.official_data_date)||m.official_data_date>targetDate))throw Error('官方信用交易維持率資料日無效。');
+  const hasLast=m.last_available_date!==null||m.last_available_value!==null;
+  if(hasLast&&(!validDate(m.last_available_date)||m.last_available_date>targetDate||!positive(m.last_available_value)))throw Error('官方信用交易維持率前值無效。');
+  if(m.official_data_date!==null&&m.official_data_date!==m.last_available_date)throw Error('官方信用交易維持率實際日期與前值不一致。');
+  if(m.official_status==='AVAILABLE'){
+    if(m.status!=='AVAILABLE'||!positive(m.value)||m.official_data_date!==targetDate||m.last_available_date!==targetDate||m.last_available_value!==m.value)throw Error('官方信用交易維持率當日值未通過核對。');
+  }else if(m.status!=='MISSING'||m.value!==null||m.official_status==='WAITING_OFFICIAL'&&m.official_data_date===targetDate)throw Error('官方信用交易維持率缺值不可沿用舊值。');
+  return m;
+}
+function officialCreditCardMarkup({target,status,value=null,lastDate=null,lastValue=null,sourceUrl=null}){
+  const labels={AVAILABLE:'當日有效',WAITING_OFFICIAL:'等待官方',MISSING:'資料缺漏',SOURCE_ERROR:'讀取異常'};
+  const pct=v=>`${v.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})}%`;
+  const date=validDate(target)?target:'目前交易日';
+  const message=status==='AVAILABLE'?`官方資料日 ${date}`:status==='WAITING_OFFICIAL'?`等待 ${date} 官方資料`:status==='SOURCE_ERROR'?`本次讀取異常，${date} 當日值暫停顯示`:`尚無可用的 ${date} 官方值`;
+  const last=status!=='AVAILABLE'&&lastDate!==null?`<p class="official-credit-last">最近有效：<time datetime="${esc(lastDate)}">${esc(lastDate)}</time> · <strong>${esc(pct(lastValue))}</strong>${lastDate===target?'（本次未採用）':'（非當日值）'}</p>`:'';
+  const link=sourceUrl!==null?`<a href="${esc(sourceUrl)}" target="_blank" rel="noopener noreferrer">證交所官方統計 ↗</a>`:'<p>官方連結待資料核對。</p>';
+  return `<article class="official-credit-card" data-official-status="${esc(status)}" aria-labelledby="officialCreditTitle"><header><h3 id="officialCreditTitle">官方全市場信用交易擔保維持率</h3><span class="official-credit-status">${esc(labels[status])}</span></header><div class="official-credit-body"><strong class="official-credit-value">${status==='AVAILABLE'?esc(pct(value)):'—'}</strong><div class="official-credit-copy"><p class="official-credit-date">${esc(message)}</p>${last}<p class="official-credit-scope">上市＋上櫃 · 融資＋融券</p></div></div><details class="official-credit-method"><summary>官方來源與口徑</summary><p>（融資融券擔保品市值＋融券保證金）÷（融資金額＋融券標的市值）×100%。此為官方全市場統計，不代表個別投資人或券商的帳戶維持率，也不是漲跌機率。</p>${link}</details></article>`;
+}
+export function renderOfficialCreditCard(data){
+  validateIndicators(data);
+  const m=data.metrics.find(m=>m.id===OFFICIAL_CREDIT_METRIC_ID);
+  return officialCreditCardMarkup(m?{target:data.as_of,status:m.official_status,value:m.value,lastDate:m.last_available_date,lastValue:m.last_available_value,sourceUrl:m.source_url}:{target:data.as_of,status:'MISSING'});
+}
+
+export const FINANCING_ESTIMATE_METRIC_ID='ALL_financing_collateral_estimate';
+export const FINANCING_ESTIMATE_SCOPE='TWSE_AND_TPEX_MARGIN_BALANCES_INCLUDING_ETF';
+export function validateFinancingEstimateMetric(m,targetDate){
+  const positive=v=>typeof v==='number'&&Number.isFinite(v)&&v>0;
+  const percentage=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=100;
+  if(!m||m.id!==FINANCING_ESTIMATE_METRIC_ID||!validDate(targetDate)||m.as_of!==targetDate||m.category!=='credit'||m.unit!=='%'||m.is_probability!==false||m.trial_lamp!==null||m.coverage_scope!==FINANCING_ESTIMATE_SCOPE||!['PARTIAL_PRICED','COMPLETE_PRICED','UNAVAILABLE'].includes(m.estimate_status))throw Error('純融資市場估算口徑未通過核對。');
+  if(typeof m.source!=='string'||!m.source.trim()||m.source.length>600)throw Error('純融資市場估算來源未提供。');
+  const hasLast=m.last_available_date!==null||m.last_available_value!==null;
+  if(hasLast&&(!validDate(m.last_available_date)||m.last_available_date>targetDate||!positive(m.last_available_value)))throw Error('純融資市場估算前值無效。');
+  const countNames=['missing_price_count','positive_balance_count','priced_balance_count'];
+  if(countNames.some(k=>m[k]!==null&&(!Number.isInteger(m[k])||m[k]<0)))throw Error('純融資市場估算覆蓋筆數無效。');
+  const knownCounts=countNames.every(k=>m[k]!==null);
+  if(!knownCounts&&countNames.some(k=>m[k]!==null)||knownCounts&&m.priced_balance_count+m.missing_price_count!==m.positive_balance_count)throw Error('純融資市場估算覆蓋筆數不一致。');
+  if(!Array.isArray(m.missing_price_rows)||m.missing_price_rows.length>10000||knownCounts&&m.missing_price_rows.length!==m.missing_price_count)throw Error('純融資市場估算缺價名單不一致。');
+  const ids=new Set();
+  for(const row of m.missing_price_rows){
+    if(!row||!validId(row.stock_id)||ids.has(row.stock_id)||typeof row.stock_name!=='string'||!row.stock_name.trim()||row.stock_name.length>120||!Number.isInteger(row.lots)||row.lots<=0||typeof row.reason!=='string'||!row.reason||row.reason.length>240)throw Error('純融資市場估算缺價明細無效。');
+    ids.add(row.stock_id);
+    const hasPrice=row.last_price_date!==null||row.last_price!==null;
+    if(hasPrice&&(!validDate(row.last_price_date)||row.last_price_date>targetDate||!positive(row.last_price)))throw Error('純融資市場估算情境價格日期無效。');
+    if(row.estimated_value_ntd!==undefined&&row.estimated_value_ntd!==null&&(!positive(row.estimated_value_ntd)||!hasPrice||Math.abs(row.estimated_value_ntd-row.lots*1000*row.last_price)>Math.max(1e-5,row.estimated_value_ntd*1e-10)))throw Error('純融資市場估算情境金額無效。');
+  }
+  const missingScenarios=m.missing_price_rows.filter(row=>row.last_price===null).length;
+  if(m.scenario_missing_count!==undefined&&m.scenario_missing_count!==null&&(!Number.isInteger(m.scenario_missing_count)||m.scenario_missing_count!==missingScenarios))throw Error('純融資市場估算情境缺價數不一致。');
+  for(const key of ['missing_lots_pct','last_price_estimated_value_share_pct','recent_price_coverage_pct'])if(m[key]!==null&&!percentage(m[key]))throw Error('純融資市場估算覆蓋百分比無效。');
+  if(m.oldest_scenario_price_date!==null&&(!validDate(m.oldest_scenario_price_date)||m.oldest_scenario_price_date>targetDate))throw Error('純融資市場估算最舊價格日期無效。');
+  if(m.estimate_status==='UNAVAILABLE'){
+    if(m.status!=='MISSING'||m.value!==null||m.data_date!==null||m.last_price_scenario_value!==null||m.last_price_estimated_value_share_pct!==null||m.recent_price_coverage_pct!==null||m.oldest_scenario_price_date!==null||m.loan_amount_ntd!==null&&!positive(m.loan_amount_ntd))throw Error('純融資市場估算缺值不可當今日值。');
+    return m;
+  }
+  if(m.status!=='AVAILABLE'||m.data_date!==targetDate||!positive(m.value)||!positive(m.loan_amount_ntd)||!knownCounts||m.positive_balance_count<=0||m.priced_balance_count<=0||m.missing_lots_pct===null||m.last_available_date!==targetDate||m.last_available_value!==m.value)throw Error('純融資市場估算當日資料無效。');
+  if(m.estimate_status==='COMPLETE_PRICED'){
+    if(m.missing_price_count!==0||m.missing_lots_pct!==0||m.last_price_scenario_value!==m.value||m.last_price_estimated_value_share_pct!==0||m.recent_price_coverage_pct!==100||m.oldest_scenario_price_date!==null)throw Error('純融資市場估算完整覆蓋不一致。');
+  }else{
+    if(m.missing_price_count<=0)throw Error('純融資市場估算部分覆蓋缺少名單。');
+    if(m.last_price_scenario_value===null){
+      if(!missingScenarios||m.last_price_estimated_value_share_pct!==null||m.recent_price_coverage_pct!==null||m.oldest_scenario_price_date!==null)throw Error('純融資市場估算不完整情境不可填值。');
+    }else{
+      if(missingScenarios||!positive(m.last_price_scenario_value)||m.last_price_scenario_value<m.value||m.last_price_estimated_value_share_pct===null||m.recent_price_coverage_pct===null)throw Error('純融資市場估算情境缺少有效價格。');
+      const oldest=m.missing_price_rows.map(row=>row.last_price_date).sort()[0];
+      if(m.oldest_scenario_price_date!==oldest||Math.abs(m.recent_price_coverage_pct-m.value/m.last_price_scenario_value*100)>1e-5||Math.abs(m.last_price_estimated_value_share_pct+m.recent_price_coverage_pct-100)>1e-5)throw Error('純融資市場估算情境覆蓋或日期不一致。');
+    }
+  }
+  return m;
+}
+function financingEstimateCardMarkup(m,target){
+  const available=m?.status==='AVAILABLE',partial=m?.estimate_status==='PARTIAL_PRICED';
+  const pct=(v,digits=2)=>`${v.toLocaleString('zh-TW',{minimumFractionDigits:digits,maximumFractionDigits:digits})}%`;
+  const day=validDate(target)?target:'目前交易日';
+  const label=available?partial?'部分當日價格':'當日價格完整':'當日估算不可用';
+  const current=available?`<p>資料日 <time datetime="${esc(m.data_date)}">${esc(m.data_date)}</time></p><p>當日有效價 ${m.priced_balance_count.toLocaleString('zh-TW')}／${m.positive_balance_count.toLocaleString('zh-TW')} 檔</p>`:`<p>${esc(day)} 暫無可用的當日估算</p>${m?.last_available_date?`<p class="official-credit-last">前次當日價部分：<time datetime="${esc(m.last_available_date)}">${esc(m.last_available_date)}</time> · ${esc(pct(m.last_available_value))}${m.last_available_date===target?'（本次未採用）':'（非當日值）'}</p>`:''}`;
+  const scenario=partial?`<div class="financing-scenario"><span>最近價補估情境</span><strong>${m.last_price_scenario_value!==null?esc(pct(m.last_price_scenario_value)):'資料不足'}</strong><small>${m.last_price_scenario_value!==null?`含 ${m.missing_price_count} 檔缺價標的的最近保存價，非完整當日估值。`:`仍有 ${m.missing_price_rows.filter(row=>row.last_price===null).length} 檔缺少保存價，未補零。`}</small></div>`:'';
+  const datedRows=m?.missing_price_rows?.filter(row=>row.last_price_date!==null)||[],oldest=datedRows.length?datedRows.reduce((a,b)=>a.last_price_date<b.last_price_date?a:b):null;
+  const age=oldest?`<p class="financing-oldest">情境最舊保存價：<time datetime="${esc(oldest.last_price_date)}">${esc(oldest.last_price_date)}</time>（${esc(oldest.stock_id)} ${esc(oldest.stock_name)}）；舊價僅供情境參考。</p>`:'';
+  const stats=available?`<p>缺價 ${m.missing_price_count} 檔${m.missing_lots_pct!==null?`，占融資張數 ${esc(pct(m.missing_lots_pct,4))}`:''}。${partial&&m.last_price_estimated_value_share_pct!==null?`最近價補估金額占情境總市值 ${esc(pct(m.last_price_estimated_value_share_pct,4))}；當日價部分占 ${esc(pct(m.recent_price_coverage_pct,4))}。`:''}</p>`:'';
+  const priceReasons={RAW_ROW_ABSENT:'無當日價格列',CLOSE_ZERO:'當日收盤價為零',CLOSE_INVALID:'當日收盤價無效'};
+  const rows=m?.missing_price_rows?.length?`<div class="financing-missing-list">${m.missing_price_rows.map(row=>`<div class="financing-missing-row"><strong>${esc(row.stock_id)} ${esc(row.stock_name)}</strong><span>融資 ${row.lots.toLocaleString('zh-TW')} 張 · ${esc(priceReasons[row.reason]||'當日無合格收盤價')}</span><span>${row.last_price_date?`${esc(row.last_price_date)} · ${esc(num(row.last_price))} 元（情境價）`:'無可用保存價；未補零'}</span></div>`).join('')}</div>`:'';
+  return `<article class="official-credit-card financing-estimate-card" data-estimate-status="${esc(m?.estimate_status||'UNAVAILABLE')}" aria-labelledby="financingEstimateTitle"><header><h3 id="financingEstimateTitle">純融資市場估算</h3><span class="official-credit-status">市場估算 · ${esc(label)}</span></header><div class="official-credit-body"><div class="financing-current"><span>${available&&!partial?'當日價格估算':'當日有效價部分'}</span><strong class="official-credit-value">${available?esc(pct(m.value)):'—'}</strong></div><div class="official-credit-copy">${current}<p class="official-credit-scope">上市＋上櫃（含 ETF） · 純融資</p></div></div>${scenario}${age}<p class="financing-estimate-disclaimer">本地估算，非官方信用交易維持率，也非個別帳戶實際維持率。</p><details class="official-credit-method"><summary>估算口徑與缺價明細</summary><p>Σ（融資餘額張數 ×1,000 ×未還原股價）÷兩市融資金額 ×100%。當日有效價部分未計入缺價標的；最近價補估情境另列，不當成當日實值。</p>${stats}${m?.source?`<p>${esc(m.source)}</p>`:''}${rows}</details></article>`;
+}
+export function renderFinancingEstimateCard(data){
+  validateIndicators(data);
+  return financingEstimateCardMarkup(data.metrics.find(m=>m.id===FINANCING_ESTIMATE_METRIC_ID)||null,data.as_of);
+}
+export function renderMarketCreditCards(data){
+  return `<section class="market-credit-cards" aria-label="官方信用交易統計與純融資市場估算">${renderOfficialCreditCard(data)}${renderFinancingEstimateCard(data)}</section>`;
+}
+function unavailableMarketCreditCards(target){
+  return `<section class="market-credit-cards" aria-label="官方信用交易統計與純融資市場估算">${officialCreditCardMarkup({target,status:'SOURCE_ERROR'})}${financingEstimateCardMarkup(null,target)}</section>`;
+}
+
 export function validateIndicators(data){
   if(data?.schema!=='MARKET_INDICATORS_DISPLAY_V1'||!validDate(data.as_of)||!Array.isArray(data.metrics)||data.metrics.length>100||data.raw_data_included!==false||data.ETF_holdings_included!==false)throw Error('指標摘要格式未通過核對。');
   if(data.publication_policy!=='NO_INSTITUTION_OR_FUTURES_VALUES_20261029_V1'||data.institution_and_futures_values_included!==false||data.metrics.some(m=>!['price','volume','trend','breadth','credit','pending'].includes(m.category)||m.id==='put_call'))throw Error('公開指標範圍不符。');
@@ -264,6 +370,8 @@ export function validateIndicators(data){
   for(const m of data.metrics){
     if(ids.has(m.id)||typeof m.id!=='string'||m.as_of!==data.as_of||m.is_probability!==false||m.trial_lamp!==null||!['AVAILABLE','MISSING'].includes(m.status)||!Array.isArray(m.comparisons)||m.comparisons.map(c=>c.sessions).join()!=='1,5,10,20')throw Error('指標欄位未通過核對。');
     ids.add(m.id);if(m.status==='AVAILABLE'&&!Number.isFinite(m.value)||m.status==='MISSING'&&m.value!==null)throw Error('缺值不可當成零。');
+    if(m.id===OFFICIAL_CREDIT_METRIC_ID)validateOfficialCreditMetric(m,data.as_of);
+    if(m.id===FINANCING_ESTIMATE_METRIC_ID)validateFinancingEstimateMetric(m,data.as_of);
     for(const c of m.comparisons){
       if(c.baseline_date!==data.baseline_dates[String(c.sessions)]||!validDate(c.baseline_date)||c.baseline_date>=data.as_of)throw Error('比較交易日不符。');
       if(c.difference!==null&&(!Number.isFinite(c.baseline)||!Number.isFinite(m.value)||Math.abs(c.difference-(m.value-c.baseline))>1e-6))throw Error('比較差異不符。');
@@ -277,7 +385,7 @@ export function indicatorRows(data,market='TAIEX',group='all',n=1,mode='point'){
   validateIndicators(data);
   const groups={price:['price','volume','trend'],breadth:['breadth'],credit:['credit','pending']};
   if(!['TAIEX','TPEx'].includes(market)||![1,5,10,20].includes(n)||!['point','prior_mean','sum'].includes(mode))throw Error('比較選項無效。');
-  return data.metrics.filter(m=>(!m.id.startsWith('TAIEX_')&&!m.id.startsWith('TPEx_')||m.id.startsWith(market+'_'))&&(group==='all'&&m.category!=='sample_institution'||groups[group]?.includes(m.category))).map(m=>{
+  return data.metrics.filter(m=>m.id!==OFFICIAL_CREDIT_METRIC_ID&&m.id!==FINANCING_ESTIMATE_METRIC_ID&&(!m.id.startsWith('TAIEX_')&&!m.id.startsWith('TPEx_')||m.id.startsWith(market+'_'))&&(group==='all'&&m.category!=='sample_institution'||groups[group]?.includes(m.category))).map(m=>{
     const c=m.comparisons.find(c=>c.sessions===n);
     const base=mode==='point'?c.baseline:mode==='prior_mean'?m.prior_means?.[n]??null:null;
     const delta=mode==='point'?c.difference:mode==='prior_mean'&&Number.isFinite(m.value)&&Number.isFinite(base)?m.value-base:null;
@@ -295,7 +403,7 @@ export function renderIndicatorTable(data,{market='TAIEX',group='all',n=1,mode='
   return `<table class="indicator-table"><thead><tr><th>指標／口徑</th><th>資料日 ${esc(data.as_of)}</th><th>${esc(baseTitle)}</th><th>${mode==='sum'?'狀態':'差異／變化'}</th></tr></thead><tbody>${rows.map(m=>`<tr><td data-label="指標"><strong>${esc(m.label)}</strong><span class="indicator-unit">${esc(m.unit)}${m.sample_count!==undefined?` · 固定樣本 ${m.sample_count}/${m.target_universe_count} 家`:''}</span><details><summary>來源與規則</summary><p>${esc(m.source)}<br>${esc(m.note)}</p></details></td><td data-label="當日"><strong>${fmt(m.value)}</strong>${m.value===null?`<small>當日待資料${m.last_available_date?`；最近可用 ${esc(m.last_available_date)}：${fmt(m.last_available_value)} ${esc(m.unit)}`:''}</small>`:''}</td><td data-label="${esc(baseTitle)}">${fmt(mode==='sum'?m.sum:m.baseline)}${mode!=='point'&&(mode==='sum'?m.sum:m.baseline)===null?'<small>不適用或完整窗口不足</small>':''}</td><td data-label="變化"><span class="indicator-state ${m.direction==='資料不足'?'pending':''}">${esc(m.direction)}</span>${mode==='sum'?'':`<strong class="indicator-change">${sign(m.delta)} ${esc(m.unit)}</strong>`}</td></tr>`).join('')}</tbody></table>`;
 }
 
-async function mountMarketIndicators(marketBody){
+export async function mountMarketIndicators(marketBody){
   const host=document.getElementById('marketIndicators');if(!host)return;
   try{
     const base=new URL('../research-showcases/market-indicators/',location.href);
@@ -304,10 +412,10 @@ async function mountMarketIndicators(marketBody){
     const dr=await fetch(new URL('data.json',base),{cache:'no-cache'});if(!dr.ok)throw Error();const bytes=await dr.arrayBuffer();await verifyResourceBytes(bytes,manifest.files['data.json']);
     const data=validateIndicators(JSON.parse(new TextDecoder('utf8',{fatal:true}).decode(bytes)));if(data.as_of!==manifest.as_of)throw Error();
     if(marketBody&&data.as_of===marketBody.market_as_of){document.getElementById('marketCards').innerHTML=renderMarket(marketBody,false,data);document.getElementById('homeMarketSummary').innerHTML=renderMarket(marketBody,true,data);}
-    host.innerHTML=`<div class="section-heading"><div><div class="eyebrow">MARKET DASHBOARD</div><h3>大盤指標與變化</h3></div><span class="chip">描述性狀態・試行介面</span></div><p class="indicator-intro">先看資料，再看變化。增加／減少只描述數值方向，不等於多空訊號或買賣建議。</p><p class="notice">指標比較快照 <strong>${esc(data.as_of)}</strong> · ${data.metrics.filter(m=>m.status==='AVAILABLE').length}/${data.metrics.length} 項當日可用（含兩市場）。${data.automatic_refresh_installed?'已接上當日研究發布後刷新；設定已安裝，實際更新以此資料日為準。':'此比較快照尚未接上每日自動刷新。'}缺資料保留「—」，不以舊值補今日。</p><div class="indicator-controls"><label>市場<select id="indicatorMarket"><option value="TAIEX">上市／加權</option><option value="TPEx">上櫃／櫃買</option></select></label><label>指標<select id="indicatorGroup"><option value="all">全部指標</option><option value="price">價格・量能・趨勢</option><option value="breadth">市場廣度</option><option value="credit">融資・待接來源</option></select></label><label>比較期間<select id="indicatorPeriod"><option value="1">昨日（1交易日前）</option><option value="5">5交易日前</option><option value="10">10交易日前</option><option value="20">20交易日前</option></select></label><label>比較方式<select id="indicatorMode"><option value="point">指定交易日：當日 − 基準日</option><option value="prior_mean">量能：對前 N 日均值</option></select></label></div><p id="indicatorBasis" class="footnote"></p><div id="indicatorTable" class="table-scroll"></div><div class="indicator-contracts"><details><summary>哪些可以當成大盤燈號？</summary><p>既有市場 State Engine 的上升／局部修正與回撤位置保留於下方。這一版先呈現資料與方向，沒有新增未回測的紅綠綜合分數。</p><p>個股分點集中、相對大盤／產業族群、個股火藥桶的母體與規則不同，不能直接套在指數上。目前未找到可驗證的大盤專用火藥桶規則。</p><p>法人與期貨資料保留本地追蹤，不放入本頁公開摘要，也未納入已採用的大盤機率。</p></details></div><section class="market-outlook"><h3>大盤綜合機率</h3><p class="footnote">價格指數未來交易日報酬；新模型研究中。下方既有 H20／H60 是總報酬、特定觸發條件且排除平盤的研究估計，不能直接填入這裡。</p><div class="outlook-grid">${[5,10,20].map(n=>`<article class="outlook-card"><h4>未來 ${n} 個交易日</h4><span class="indicator-state pending">待建立並驗證</span><dl><div><dt>上漲</dt><dd>—</dd></div><div><dt>下跌</dt><dd>—</dd></div><div><dt>平盤</dt><dd>—</dd></div></dl></article>`).join('')}</div></section>`;
+    host.innerHTML=`${renderMarketCreditCards(data)}<div class="section-heading"><div><div class="eyebrow">MARKET DASHBOARD</div><h3>大盤指標與變化</h3></div><span class="chip">描述性狀態・試行介面</span></div><p class="indicator-intro">先看資料，再看變化。增加／減少只描述數值方向，不等於多空訊號或買賣建議。</p><p class="notice">指標比較快照 <strong>${esc(data.as_of)}</strong> · ${data.metrics.filter(m=>m.status==='AVAILABLE').length}/${data.metrics.length} 項當日可用（含分市場與全市場指標）。${data.automatic_refresh_installed?'已接上當日研究發布後刷新；設定已安裝，實際更新以此資料日為準。':'此比較快照尚未接上每日自動刷新。'}缺資料保留「—」，不以舊值補今日。</p><div class="indicator-controls"><label>市場<select id="indicatorMarket"><option value="TAIEX">上市／加權</option><option value="TPEx">上櫃／櫃買</option></select></label><label>指標<select id="indicatorGroup"><option value="all">全部指標</option><option value="price">價格・量能・趨勢</option><option value="breadth">市場廣度</option><option value="credit">融資・待接來源</option></select></label><label>比較期間<select id="indicatorPeriod"><option value="1">昨日（1交易日前）</option><option value="5">5交易日前</option><option value="10">10交易日前</option><option value="20">20交易日前</option></select></label><label>比較方式<select id="indicatorMode"><option value="point">指定交易日：當日 − 基準日</option><option value="prior_mean">量能：對前 N 日均值</option></select></label></div><p id="indicatorBasis" class="footnote"></p><div id="indicatorTable" class="table-scroll"></div><div class="indicator-contracts"><details><summary>哪些可以當成大盤燈號？</summary><p>既有市場 State Engine 的上升／局部修正與回撤位置保留於下方。這一版先呈現資料與方向，沒有新增未回測的紅綠綜合分數。</p><p>個股分點集中、相對大盤／產業族群、個股火藥桶的母體與規則不同，不能直接套在指數上。目前未找到可驗證的大盤專用火藥桶規則。</p><p>法人與期貨資料保留本地追蹤，不放入本頁公開摘要，也未納入已採用的大盤機率。</p></details></div><section class="market-outlook"><h3>大盤綜合機率</h3><p class="footnote">價格指數未來交易日報酬；新模型研究中。下方既有 H20／H60 是總報酬、特定觸發條件且排除平盤的研究估計，不能直接填入這裡。</p><div class="outlook-grid">${[5,10,20].map(n=>`<article class="outlook-card"><h4>未來 ${n} 個交易日</h4><span class="indicator-state pending">待建立並驗證</span><dl><div><dt>上漲</dt><dd>—</dd></div><div><dt>下跌</dt><dd>—</dd></div><div><dt>平盤</dt><dd>—</dd></div></dl></article>`).join('')}</div></section>`;
     const paint=()=>{const opts={market:document.getElementById('indicatorMarket').value,group:document.getElementById('indicatorGroup').value,n:Number(document.getElementById('indicatorPeriod').value),mode:document.getElementById('indicatorMode').value};document.getElementById('indicatorTable').innerHTML=renderIndicatorTable(data,opts);document.getElementById('indicatorBasis').textContent=opts.mode==='point'?`基準日 ${data.baseline_dates[opts.n]} → ${data.as_of}；使用已核實交易日，不是曆日或最近 N 列。`:`均值不含當日，適用量能；任一應有交易日缺資料就不計算。`;};
     for(const id of ['indicatorMarket','indicatorGroup','indicatorPeriod','indicatorMode'])document.getElementById(id).addEventListener('change',paint);paint();
-  }catch{host.innerHTML='<h3>大盤指標與變化</h3>'+empty('指標摘要尚未通過版本或來源核對；其他已發布區塊仍可查看。');}
+  }catch{host.innerHTML=unavailableMarketCreditCards(marketBody?.market_as_of)+'<h3>大盤指標與變化</h3>'+empty('指標摘要尚未通過版本或來源核對；其他已發布區塊仍可查看。');}
 }
 
 // Display-only rankings: saved predictions stay unchanged. No fit, inference or source API.
