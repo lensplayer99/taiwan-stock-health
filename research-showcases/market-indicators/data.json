@@ -1,7 +1,7 @@
 {
   "schema": "MARKET_INDICATORS_DISPLAY_V1",
   "as_of": "2026-11-05",
-  "created_at_utc": "2026-11-05T13:25:11.048715+00:00",
+  "created_at_utc": "2026-11-05T16:51:20.010434+00:00",
   "kind": "DESCRIPTIVE_ADOPTED_DAILY_SOURCES",
   "calendar_basis": "原已核實同市場交易日曆；不以最近 N 列代替",
   "baseline_dates": {
@@ -1128,6 +1128,212 @@
       ],
       "trial_lamp": null,
       "is_probability": false
+    },
+    {
+      "id": "ALL_credit_maintenance_ratio",
+      "label": "全市場信用交易擔保維持率",
+      "category": "credit",
+      "unit": "%",
+      "as_of": "2026-11-05",
+      "value": 159.77,
+      "status": "AVAILABLE",
+      "source": "臺灣證券交易所臺股儀表板・全市場",
+      "source_url": "https://www.twse.com.tw/dashboard/zh/credit/margin.html",
+      "market_scope": "TWSE_AND_TPEX_CREDIT_TRADING",
+      "official_status": "AVAILABLE",
+      "official_data_date": "2026-11-05",
+      "last_available_date": "2026-11-05",
+      "last_available_value": 159.77,
+      "comparisons": [
+        {
+          "sessions": 1,
+          "baseline_date": "2026-11-04",
+          "baseline": 167.42,
+          "difference": -7.649999999999977,
+          "change_pct": -4.569346553577813
+        },
+        {
+          "sessions": 5,
+          "baseline_date": "2026-10-29",
+          "baseline": null,
+          "difference": null,
+          "change_pct": null
+        },
+        {
+          "sessions": 10,
+          "baseline_date": "2026-10-20",
+          "baseline": null,
+          "difference": null,
+          "change_pct": null
+        },
+        {
+          "sessions": 20,
+          "baseline_date": "2026-10-05",
+          "baseline": null,
+          "difference": null,
+          "change_pct": null
+        }
+      ],
+      "trial_lamp": null,
+      "is_probability": false,
+      "note": "上市＋上櫃、融資＋融券。（融資融券擔保品市值＋融券保證金）÷（融資金額＋融券標的市值）×100%。非個別帳戶或券商狀況；資料可能晚到，固定發布時刻未核定。"
+    },
+    {
+      "id": "ALL_financing_collateral_estimate",
+      "label": "純融資市場擔保價值估算",
+      "category": "credit",
+      "unit": "%",
+      "as_of": "2026-11-05",
+      "data_date": "2026-11-05",
+      "value": 154.10706906260586,
+      "status": "AVAILABLE",
+      "estimate_status": "PARTIAL_PRICED",
+      "coverage_scope": "TWSE_AND_TPEX_MARGIN_BALANCES_INCLUDING_ETF",
+      "source": "既有 FinMind 個股融資／未還原收盤價＋上市及上櫃融資金額；本地市場估算",
+      "note": "Σ（融資餘額張數×1000×未還原收盤價）÷同範圍兩市融資金額×100%。非官方維持率，亦非個別帳戶維持率；缺價不補零。最近保存價另列情境，不當成當日價。",
+      "is_probability": false,
+      "trial_lamp": null,
+      "comparisons": [
+        {
+          "sessions": 1,
+          "baseline_date": "2026-11-04",
+          "baseline": null,
+          "difference": null,
+          "change_pct": null
+        },
+        {
+          "sessions": 5,
+          "baseline_date": "2026-10-29",
+          "baseline": null,
+          "difference": null,
+          "change_pct": null
+        },
+        {
+          "sessions": 10,
+          "baseline_date": "2026-10-20",
+          "baseline": null,
+          "difference": null,
+          "change_pct": null
+        },
+        {
+          "sessions": 20,
+          "baseline_date": "2026-10-05",
+          "baseline": null,
+          "difference": null,
+          "change_pct": null
+        }
+      ],
+      "last_available_date": "2026-11-05",
+      "last_available_value": 154.10706906260586,
+      "last_price_scenario_value": 154.26662983145758,
+      "scenario_data_date": "2026-11-05",
+      "missing_price_rows": [
+        {
+          "stock_id": "00682U",
+          "stock_name": "期元大美元指數",
+          "name": "期元大美元指數",
+          "lots": 2,
+          "reason": "CLOSE_ZERO",
+          "last_price_date": "2026-11-04",
+          "last_price": 20.94,
+          "estimated_value_ntd": 41880.0
+        },
+        {
+          "stock_id": "1589",
+          "stock_name": "永冠-KY",
+          "name": "永冠-KY",
+          "lots": 5,
+          "reason": "RAW_ROW_ABSENT",
+          "last_price_date": "2026-04-02",
+          "last_price": 5.54,
+          "estimated_value_ntd": 27700.0
+        },
+        {
+          "stock_id": "3226",
+          "stock_name": "龍鋒",
+          "name": "龍鋒",
+          "lots": 4,
+          "reason": "CLOSE_ZERO",
+          "last_price_date": "2026-11-04",
+          "last_price": 49.15,
+          "estimated_value_ntd": 196600.0
+        },
+        {
+          "stock_id": "3714",
+          "stock_name": "富采",
+          "name": "富采",
+          "lots": 20458,
+          "reason": "RAW_ROW_ABSENT",
+          "last_price_date": "2026-11-04",
+          "last_price": 56.7,
+          "estimated_value_ntd": 1159968600.0
+        },
+        {
+          "stock_id": "4207",
+          "stock_name": "環泰",
+          "name": "環泰",
+          "lots": 627,
+          "reason": "RAW_ROW_ABSENT",
+          "last_price_date": "2026-10-28",
+          "last_price": 19.25,
+          "estimated_value_ntd": 12069750.0
+        },
+        {
+          "stock_id": "5906",
+          "stock_name": "台南-KY",
+          "name": "台南-KY",
+          "lots": 16,
+          "reason": "CLOSE_ZERO",
+          "last_price_date": "2026-11-04",
+          "last_price": 39.0,
+          "estimated_value_ntd": 624000.0
+        },
+        {
+          "stock_id": "6615",
+          "stock_name": "慧智",
+          "name": "慧智",
+          "lots": 4,
+          "reason": "CLOSE_ZERO",
+          "last_price_date": "2026-11-04",
+          "last_price": 32.95,
+          "estimated_value_ntd": 131800.0
+        },
+        {
+          "stock_id": "6649",
+          "stock_name": "台生材",
+          "name": "台生材",
+          "lots": 1106,
+          "reason": "CLOSE_ZERO",
+          "last_price_date": "2026-11-04",
+          "last_price": 36.45,
+          "estimated_value_ntd": 40313700.0
+        }
+      ],
+      "missing_price_count": 8,
+      "positive_balance_count": 2053,
+      "priced_balance_count": 2045,
+      "missing_lots_pct": 0.1905658498827851,
+      "last_price_estimated_value_share_pct": 0.10343181090171548,
+      "recent_price_coverage_pct": 99.89656818909829,
+      "oldest_scenario_price_date": "2026-04-02",
+      "loan_amount_ntd": 760446342000,
+      "reason": null,
+      "scenario_missing_count": 0,
+      "priced_financing_value_ntd": 1171901569450.0,
+      "scenario_missing_value_ntd": 1213374030.0,
+      "financing_lots": 11661061,
+      "missing_financing_lots": 22222,
+      "quality_status": "PARTIAL_WITH_DISCLOSED_OLD_PRICE_SCENARIO",
+      "priced_lot_coverage_pct": 99.80943415011721,
+      "quality_contract": {
+        "same_day_scope_and_unit_reconciliation_required": true,
+        "missing_quotes_imputed_in_main_value": false,
+        "scenario_requires_quote_for_every_missing_id": true,
+        "old_quotes_keep_original_dates": true,
+        "automatic_trend_or_margin_call_approval": false,
+        "quality_thresholds_backtested": false
+      },
+      "quality_note": "品質欄位保留張數及估值覆蓋與全部舊價日期；有效價部分不是完整同日估值。未自動判定可作趨勢或追繳決策。"
     }
   ],
   "probabilities": [
@@ -1157,7 +1363,8 @@
   "source_links": [
     "https://www.twse.com.tw/staticFiles/news/news/tsecnews/8a8216d6a0fa351b01a1638507940202.pdf",
     "https://finmind.github.io/tutor/TaiwanMarket/Technical/",
-    "https://finmind.github.io/tutor/TaiwanMarket/Chip/"
+    "https://finmind.github.io/tutor/TaiwanMarket/Chip/",
+    "https://www.twse.com.tw/dashboard/zh/credit/margin.html"
   ],
   "automatic_refresh_installed": true,
   "raw_data_included": false,
