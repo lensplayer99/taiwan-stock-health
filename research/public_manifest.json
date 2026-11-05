@@ -9560,19 +9560,19 @@
       "sha256": "b43b5f71a8b171ef7b04297558cc3572612e012e44db511ddc9b4b40368ec9f2"
     },
     "index.html": {
-      "bytes": 10607,
-      "sha256": "70d32f0c960b95e3410c837f8cad47491ebea076b9bc422dbbb265cf51abf784"
+      "bytes": 10611,
+      "sha256": "0aecee562c0808c9dd23fa61d35f55ff7287c519f451909092656dfe4909bcc8"
     },
     "research.css": {
       "bytes": 45043,
       "sha256": "5b6803cee54b32f9dad14bcdbc0437c703ceccaafe24ff13656520ef8a6350bf"
     },
     "research.js": {
-      "bytes": 167437,
-      "sha256": "f30174ddf810fa215334717533bb85255248642645c624356d6de53a59d3eece"
+      "bytes": 168766,
+      "sha256": "f1c5ce001820fa7186490634d248f3fd5ea693ceaae987817156527c4366145b"
     }
   },
-  "generated_at_utc": "2026-11-05T16:37:54.364923+00:00",
+  "generated_at_utc": "2026-11-05T18:18:03.993241+00:00",
   "limits": [
     "只讀取已保存的觀察結果；本網站不重算模型或燈號。",
     "紅燈為正向、綠燈為負向；燈數不是勝率或買賣建議。",
@@ -9588,7 +9588,7 @@
     "個股融資補刊：資料日 2026-11-05；三個融資燈仍有 3486 筆缺值（當日來源、證券資格或完整窗口未齊）。其餘燈號依各自來源計算；原始模型觀察與預測不變。"
   ],
   "market_as_of": "2026-11-05",
-  "publication_requested_at_utc": "2026-11-05T16:37:54.364923+00:00",
+  "publication_requested_at_utc": "2026-11-05T18:18:03.993241+00:00",
   "ranking_count": 1925,
   "rule_sha256": "7e3e0d0378375d97eb127b01423a3903c5e13eb3d09fb698d6fd53b47a2a94c2",
   "rule_version": "STOCK_SHORT_SIGNAL_V1_20260919",
