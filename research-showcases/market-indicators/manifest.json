@@ -1,10 +1,10 @@
 {
   "schema": "MARKET_INDICATORS_MANIFEST_V1",
-  "as_of": "2026-11-04",
+  "as_of": "2026-11-05",
   "files": {
     "data.json": {
-      "bytes": 35716,
-      "sha256": "a6285d3e4e23d6e5b8a0af72ea4420db125e718950f6b26379ee21b0264bf4f4"
+      "bytes": 35482,
+      "sha256": "c44fe464a67ff4abc6892e70db02a955313a0c042f739cff5dca9e7941bd6e2d"
     }
   },
   "ETF_holdings_included": false
