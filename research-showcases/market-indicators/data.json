@@ -1,7 +1,7 @@
 {
   "schema": "MARKET_INDICATORS_DISPLAY_V1",
   "as_of": "2026-11-06",
-  "created_at_utc": "2026-11-06T10:30:16.469461+00:00",
+  "created_at_utc": "2026-11-06T13:02:13.085997+00:00",
   "kind": "DESCRIPTIVE_ADOPTED_DAILY_SOURCES",
   "calendar_basis": "原已核實同市場交易日曆；不以最近 N 列代替",
   "baseline_dates": {
@@ -1135,29 +1135,29 @@
       "category": "credit",
       "unit": "%",
       "as_of": "2026-11-06",
-      "value": null,
-      "status": "MISSING",
+      "value": 158.05,
+      "status": "AVAILABLE",
       "source": "臺灣證券交易所臺股儀表板・全市場",
       "source_url": "https://www.twse.com.tw/dashboard/zh/credit/margin.html",
       "market_scope": "TWSE_AND_TPEX_CREDIT_TRADING",
-      "official_status": "SOURCE_ERROR",
-      "official_data_date": "2026-11-05",
-      "last_available_date": "2026-11-05",
-      "last_available_value": 159.77,
+      "official_status": "AVAILABLE",
+      "official_data_date": "2026-11-06",
+      "last_available_date": "2026-11-06",
+      "last_available_value": 158.05,
       "comparisons": [
         {
           "sessions": 1,
           "baseline_date": "2026-11-05",
           "baseline": 159.77,
-          "difference": null,
-          "change_pct": null
+          "difference": -1.7199999999999989,
+          "change_pct": -1.07654753708456
         },
         {
           "sessions": 5,
           "baseline_date": "2026-10-30",
           "baseline": 173.46,
-          "difference": null,
-          "change_pct": null
+          "difference": -15.409999999999997,
+          "change_pct": -8.883892540066874
         },
         {
           "sessions": 10,
