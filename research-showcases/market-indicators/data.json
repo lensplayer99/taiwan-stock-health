@@ -1,7 +1,7 @@
 {
   "schema": "MARKET_INDICATORS_DISPLAY_V1",
   "as_of": "2026-11-06",
-  "created_at_utc": "2026-11-06T13:16:08.061264+00:00",
+  "created_at_utc": "2026-11-06T13:34:12.924429+00:00",
   "kind": "DESCRIPTIVE_ADOPTED_DAILY_SOURCES",
   "calendar_basis": "原已核實同市場交易日曆；不以最近 N 列代替",
   "baseline_dates": {
@@ -1236,7 +1236,7 @@
       "recent_price_coverage_pct": null,
       "oldest_scenario_price_date": null,
       "loan_amount_ntd": null,
-      "reason": "NO_MATCHING_VERIFIED_FINANCIAL_CAPTURE:StopIteration:",
+      "reason": "INVALID_NUMBER",
       "last_available_scenario_value": 154.26662983145758,
       "last_available_scenario_date": "2026-11-05"
     }
