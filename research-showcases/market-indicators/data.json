@@ -1,7 +1,7 @@
 {
   "schema": "MARKET_INDICATORS_DISPLAY_V1",
   "as_of": "2026-11-06",
-  "created_at_utc": "2026-11-06T10:28:17.129821+00:00",
+  "created_at_utc": "2026-11-06T10:30:16.469461+00:00",
   "kind": "DESCRIPTIVE_ADOPTED_DAILY_SOURCES",
   "calendar_basis": "原已核實同市場交易日曆；不以最近 N 列代替",
   "baseline_dates": {
@@ -1140,7 +1140,7 @@
       "source": "臺灣證券交易所臺股儀表板・全市場",
       "source_url": "https://www.twse.com.tw/dashboard/zh/credit/margin.html",
       "market_scope": "TWSE_AND_TPEX_CREDIT_TRADING",
-      "official_status": "WAITING_OFFICIAL",
+      "official_status": "SOURCE_ERROR",
       "official_data_date": "2026-11-05",
       "last_available_date": "2026-11-05",
       "last_available_value": 159.77,
